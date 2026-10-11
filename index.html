@@ -280,6 +280,14 @@ input[type=color]{width:44px;height:40px;border:0;padding:0;background:none;curs
 .toppens .penstrip .pen{position:relative}
 .toppens .penstrip i{position:absolute;right:-6px;top:-7px;font-style:normal;font-size:10px;font-family:var(--f-type);font-weight:700;background:var(--shu);color:#fff;border-radius:3px;padding:0 4px;line-height:15px;box-shadow:0 0 0 1.5px var(--cut)}
 
+/* 画稿：编号图例 */
+.skctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.skkey{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:12px;background:var(--paper-2);border-radius:8px}
+.skkey .kk{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:8px;align-items:center;min-width:0}
+.skkey .kn{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#fff;color:#22242E;font:700 13px var(--f-type);box-shadow:0 0 0 1.5px #5A5C6A}
+.skkey .kk span{min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.skkey .kk b{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skkey .kk small{font-size:11.5px;color:var(--ink-3)}
 /* 裁剪 */
 .cropbox{position:absolute;border:2px dashed #fff;box-shadow:0 0 0 9999px rgba(10,12,30,.5);cursor:move;touch-action:none;line-height:0}
 .cv-wrap.cropping{overflow:hidden}
@@ -503,6 +511,11 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           <div class="busy" id="busy" hidden>正在换成你的笔…</div>
           <div class="cropbox" id="cropBox" hidden><i data-ch="0"></i><i data-ch="1"></i><i data-ch="2"></i><i data-ch="3"></i></div>
         </div>
+        <div class="skctl" id="skCtl" hidden>
+          <div class="pills" role="group" aria-label="画稿底色" id="skFill"><button type="button" data-fill="0" aria-pressed="false">白纸</button><button type="button" data-fill="0.35" aria-pressed="true">淡彩</button><button type="button" data-fill="1" aria-pressed="false">全彩（检查复原）</button></div>
+          <div class="pills" role="group" aria-label="写什么" id="skLab"><button type="button" data-sl="num" aria-pressed="true">写编号</button><button type="button" data-sl="no" aria-pressed="false">写色号</button></div>
+        </div>
+        <div class="skkey" id="skKey" hidden></div>
         <div class="row" id="cropBar" hidden><span class="hint">拖四个角，只框住画本身（去掉手、桌子、笔）。</span><button class="btn small primary" type="button" id="cropOk">确定裁剪</button><button class="btn small quiet" type="button" id="cropNo">取消</button></div>
         <div class="pick" id="pickOut" hidden></div>
       </div>
@@ -1176,7 +1189,7 @@ function mergeSmall(lab, W, H, minArea) {
 
 /* ================= 换色状态 ================= */
 const Swap = {
-  work: null, kind: 'art', demo: true, n: 16, detail: 0, lineOn: true, split: .5, ai: null, procMode: 'auto', cropped: false, onlyHave: true, view: 'pens',
+  work: null, kind: 'art', demo: true, n: 16, detail: 0, lineOn: true, split: .5, skFill: .35, skLab: 'num', ai: null, procMode: 'auto', cropped: false, onlyHave: true, view: 'pens',
   res: null, map: [], ov: [], extra: [], itemId: null, share: null, pick: null, cache: {}, style: '', styleSet: null, mood: 'sunny', step: 0,
   rematch() { if (this.res) { this.match(); render(); renderSwapList(); } }
 };
@@ -1248,7 +1261,35 @@ Swap.match = function () {
     if (o) no = o.no;
     return {c, rank, no};
   });
+  this.cache.sk = null;
 };
+/* 画稿用的干净分区：同一支笔的块合并，抹平毛边，太碎的并进旁边；编号按面积从大到小 */
+function sketchData() {
+  if (Swap.cache.sk) return Swap.cache.sk;
+  const r = Swap.res, W = r.W, H = r.H, N = W * H, keys = [], kid = new Map();
+  const toKey = Swap.map.map(m => { const k = m.no || ('#' + m.c.hex); if (!kid.has(k)) { kid.set(k, keys.length); keys.push({k, no: m.no, hex: m.no ? penByNo(m.no).hex : m.c.hex}); } return kid.get(k); });
+  let lab = new Uint8Array(N); for (let i = 0; i < N; i++) lab[i] = toKey[r.labels[i]];
+  for (let p = 0; p < 3; p++) lab = majority(lab, W, H, keys.length);
+  lab = mergeSmall(lab, W, H, Math.round(N * .0006));
+  const area = new Float64Array(keys.length); for (let i = 0; i < N; i++) area[lab[i]]++;
+  const order = keys.map((_, i) => i).filter(i => area[i] > 0).sort((a, b) => area[b] - area[a]);
+  const num = new Int16Array(keys.length).fill(0); order.forEach((k, j) => { num[k] = j + 1; });
+  const placed = [], cand = regionMarks(lab, W, H).filter(m => m.r >= 8).sort((a, b) => b.r - a.r);
+  for (const m of cand) {
+    const fs = Math.max(11, Math.min(20, m.r * .85)), rad = fs * .8;
+    if (placed.some(q => Math.hypot(q.x - m.x, q.y - m.y) < q.rad + rad + 6)) continue;
+    placed.push({x: m.x, y: m.y, v: m.v, fs, rad});
+    if (placed.length >= 90) break;
+  }
+  return (Swap.cache.sk = {lab, keys, num, order, area, placed});
+}
+function renderSkKey() {
+  const box = $('#skKey'), on = Swap.view === 'sketch' && !!Swap.res;
+  $('#skCtl').hidden = !on; box.hidden = !on;
+  if (!on) return;
+  const sk = sketchData(), N = Swap.res.W * Swap.res.H;
+  box.innerHTML = sk.order.map(k => { const key = sk.keys[k], p = key.no ? penByNo(key.no) : null; return '<span class="kk"><i class="kn">' + sk.num[k] + '</i>' + (p ? penHTML(p, 'mini') : '<i class="sw" style="--c:' + key.hex + '"></i>') + '<span><b>' + esc(p ? p.name || p.no : '没配笔') + '</b><small>' + esc(p ? p.no : '') + ' · ' + Math.max(1, Math.round(sk.area[k] / N * 100)) + '%</small></span></span>'; }).join('');
+}
 function groups() {
   const g = new Map();
   Swap.map.forEach(m => {
@@ -1286,24 +1327,27 @@ function render(cv, view, step) {
     const so = Swap.cache.stepOf;
     for (let i = 0; i < N; i++) { const on = so && so[i] <= step; put(i, on ? col[lab[i]] : PAPER, on ? LN[i] * lk : LN[i] / 255 * .5); }
   } else if (view === 'sketch') {
-    const tint = col.map(c => [255 - (255 - c[0]) * .14, 255 - (255 - c[1]) * .14, 255 - (255 - c[2]) * .14]);
+    const sk = sketchData(), sl = sk.lab, f = Swap.skFill, EDGE = [84, 86, 100];
+    const fillc = sk.keys.map(k => { const c = hex2rgb(k.hex); return [PAPER[0] + (c[0] - PAPER[0]) * f, PAPER[1] + (c[1] - PAPER[1]) * f, PAPER[2] + (c[2] - PAPER[2]) * f]; });
+    const la = f >= 1 ? lk * .7 : .45 / 255;
     for (let i = 0; i < N; i++) {
-      const v = lab[i], xx = i % W, edge = (xx < W - 1 && lab[i + 1] !== v) || (i + W < N && lab[i + W] !== v);
-      put(i, edge ? [196, 198, 208] : tint[v], LN[i] / 255);
+      const v = sl[i], xx = i % W, edge = (xx < W - 1 && sl[i + 1] !== v) || (i + W < N && sl[i + W] !== v);
+      if (edge) put(i, EDGE, 0); else put(i, fillc[v], LN[i] * la);
     }
   } else {
     for (let i = 0; i < N; i++) put(i, col[lab[i]], LN[i] * lk);
   }
   x.putImageData(im, 0, 0);
   if (view === 'sketch') {
-    const marks = Swap.cache.marks || (Swap.cache.marks = regionMarks(lab, W, H));
+    const sk = sketchData();
     x.textAlign = 'center'; x.textBaseline = 'middle';
-    marks.forEach(m => {
-      const p = penForLabel(m.v); if (!p) return;
-      const fs = Math.max(8, Math.min(18, m.r * 1.15));
-      x.font = '700 ' + fs + 'px "Courier Prime", ui-monospace, monospace';
-      x.lineWidth = 3; x.strokeStyle = 'rgba(255,255,255,.85)'; x.strokeText(p.no, m.x, m.y);
-      x.fillStyle = '#2A2C38'; x.fillText(p.no, m.x, m.y);
+    sk.placed.forEach(m => {
+      const key = sk.keys[m.v], t = Swap.skLab === 'no' && key.no ? key.no : String(sk.num[m.v]);
+      x.font = '700 ' + Math.round(m.fs * (t.length > 2 ? .78 : 1)) + 'px "Courier Prime", ui-monospace, monospace';
+      const w = Math.max(m.rad * 2, x.measureText(t).width + m.fs * .6), h = m.rad * 2;
+      x.fillStyle = 'rgba(255,255,255,.92)'; x.strokeStyle = '#5A5C6A'; x.lineWidth = 1.3;
+      x.beginPath(); if (x.roundRect) x.roundRect(m.x - w / 2, m.y - h / 2, w, h, h / 2); else x.rect(m.x - w / 2, m.y - h / 2, w, h); x.fill(); x.stroke();
+      x.fillStyle = '#22242E'; x.fillText(t, m.x, m.y + 1);
     });
   }
   if (view === 'compare') {
@@ -1351,7 +1395,7 @@ function regionMarks(lab, W, H) {
 /* ================= 换色：右侧清单 ================= */
 let openAlt = null;
 function renderSwapList() {
-  renderSteps();
+  renderSteps(); renderSkKey();
   const gs = groups(), ul = $('#plist');
   $('#penCount').innerHTML = flap(gs.length);
   if (!Store.pens.length) { ul.innerHTML = '<li class="hint">色卡里还没有笔，先去「我的笔」加。</li>'; return; }
@@ -1488,7 +1532,7 @@ $('#procSteps').addEventListener('click', e => {
   $$('[data-view]').forEach(x => x.setAttribute('aria-pressed', 'false'));
   $$('#procSteps [data-step]').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.step === k)));
   $('#viewHint').textContent = '画完第 ' + (k + 1) + ' 步是这样（再点一下回到全图）';
-  render();
+  render(); renderSkKey();
   $('#cvWrap').scrollIntoView({block: 'nearest', behavior: 'smooth'});
 });
 function flap(n) { return String(n).split('').map(c => '<b>' + c + '</b>').join(''); }
@@ -1538,11 +1582,13 @@ $('#pickOut').addEventListener('click', e => {
 function setView(v) {
   Swap.view = v;
   $$('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
-  $('#viewHint').textContent = ({sketch: '每一块写着该用的色号，可以照着起稿', lines: '线稿：照着在纸上轻轻起稿', compare: '左右拖动中间的线，对比原图和用你的笔画出来的样子'})[v] || '点图上任意一处，看最接近的是哪支笔';
+  $('#viewHint').textContent = ({sketch: '每块写着编号，对照下面的图例换笔；选「全彩」看填满后像不像原图', lines: '线稿：照着在纸上轻轻起稿', compare: '左右拖动中间的线，对比原图和用你的笔画出来的样子'})[v] || '点图上任意一处，看最接近的是哪支笔';
   $('#swapCv').style.touchAction = v === 'compare' ? 'none' : 'manipulation';
   $$('#procSteps [data-step]').forEach(x => x.setAttribute('aria-pressed', 'false'));
-  render();
+  render(); renderSkKey();
 }
+$$('#skFill [data-fill]').forEach(b => b.addEventListener('click', () => { Swap.skFill = +b.dataset.fill; $$('#skFill [data-fill]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); }));
+$$('#skLab [data-sl]').forEach(b => b.addEventListener('click', () => { Swap.skLab = b.dataset.sl; $$('#skLab [data-sl]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); }));
 $$('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 $('#lineOn').addEventListener('change', e => { Swap.lineOn = e.target.checked; render(); renderSteps(); });
 let cmpDrag = false;

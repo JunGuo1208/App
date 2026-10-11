@@ -1,0 +1,1729 @@
+<title>随类换色台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Layout: 方眼本桌面上的一本马克笔画画手账。换色 = 左边原图/画稿，右边「要用的笔」清单；想画 = 贴了胶带的参考图卡片；画过 = 拍立得墙；我的笔 = 手绘色卡。
+   材料家族与「如影跟读台」「临池练字台」「游刃拆招台」相同：剪纸卡片（纸色 + 白切边 + 投影，不描边）、和纸胶带标题、朱印、翻页数字。
+   本台专属：每个色块都是马克笔涂出来的色卡格（不规则边 + 笔触纹），色号写在笔杆标签上；主按钮是黑色笔杆。 */
+:root{
+  --desk:#EAE8EE;
+  --grid:rgba(98,80,140,.10);
+  --paper:#FFFFFF;
+  --paper-2:#F4F3F6;
+  --cut:#FFFFFF;
+  --ink:#22232B;
+  --ink-2:#4E4F5C;
+  --ink-3:#8A8A97;
+  --rule:rgba(34,35,43,.10);
+  --barrel:#24252C;
+  --barrel-ink:#FFFFFF;
+  --shu:#D2452F;
+  --shu-soft:rgba(210,69,47,.08);
+  --seal-ink:#FFF5EC;
+  --marker:rgba(255,206,64,.62);
+  --tape-a:rgba(240,150,170,.85);
+  --tape-b:rgba(120,190,200,.85);
+  --tape-c:rgba(250,200,90,.88);
+  --tape-ink:#2B2522;
+  --flap:#2B2C33;
+  --flap-ink:#F3F0E9;
+  --good:#2E7D5B;
+  --good-soft:rgba(46,125,91,.12);
+  --warn:#A86A12;
+  --warn-soft:rgba(168,106,18,.13);
+  --bad:#BE3A2A;
+  --bad-soft:rgba(190,58,42,.11);
+  --lift:0 1px 1px rgba(40,30,60,.07),0 6px 16px rgba(40,30,60,.10);
+  --lift-hi:0 2px 3px rgba(40,30,60,.08),0 14px 30px rgba(40,30,60,.16);
+  --f-disp:"ZCOOL KuaiLe","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --f-type:"Courier Prime","Courier New",ui-monospace,monospace;
+  --f-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --gutter:clamp(16px,3.2vw,36px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --desk:#18161D; --grid:rgba(190,170,230,.06); --paper:#25232C; --paper-2:#2D2B35; --cut:#D8D3DD;
+    --ink:#ECE9F0; --ink-2:#B9B6C2; --ink-3:#8A8796; --rule:rgba(236,233,240,.10);
+    --barrel:#ECE9F0; --barrel-ink:#1C1B22;
+    --shu:#EE7C64; --shu-soft:rgba(238,124,100,.12); --seal-ink:#1B0F0B;
+    --marker:rgba(230,190,60,.32);
+    --tape-a:rgba(200,110,135,.82); --tape-b:rgba(80,145,155,.85); --tape-c:rgba(190,150,60,.88); --tape-ink:#F7F2EA;
+    --flap:#0F0E13; --flap-ink:#E8E4DA;
+    --good:#5DBB8F; --good-soft:rgba(93,187,143,.14); --warn:#D9A44A; --warn-soft:rgba(217,164,74,.15); --bad:#EC7A63; --bad-soft:rgba(236,122,99,.14);
+    --lift:0 1px 2px rgba(0,0,0,.35),0 8px 20px rgba(0,0,0,.30); --lift-hi:0 2px 4px rgba(0,0,0,.4),0 16px 34px rgba(0,0,0,.42);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --desk:#18161D; --grid:rgba(190,170,230,.06); --paper:#25232C; --paper-2:#2D2B35; --cut:#D8D3DD;
+  --ink:#ECE9F0; --ink-2:#B9B6C2; --ink-3:#8A8796; --rule:rgba(236,233,240,.10);
+  --barrel:#ECE9F0; --barrel-ink:#1C1B22;
+  --shu:#EE7C64; --shu-soft:rgba(238,124,100,.12); --seal-ink:#1B0F0B;
+  --marker:rgba(230,190,60,.32);
+  --tape-a:rgba(200,110,135,.82); --tape-b:rgba(80,145,155,.85); --tape-c:rgba(190,150,60,.88); --tape-ink:#F7F2EA;
+  --flap:#0F0E13; --flap-ink:#E8E4DA;
+  --good:#5DBB8F; --good-soft:rgba(93,187,143,.14); --warn:#D9A44A; --warn-soft:rgba(217,164,74,.15); --bad:#EC7A63; --bad-soft:rgba(236,122,99,.14);
+  --lift:0 1px 2px rgba(0,0,0,.35),0 8px 20px rgba(0,0,0,.30); --lift-hi:0 2px 4px rgba(0,0,0,.4),0 16px 34px rgba(0,0,0,.42);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background-color:var(--desk);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px;color:var(--ink);font-family:var(--f-sans);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,h4{text-wrap:balance}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.app{max-width:1240px;margin:0 auto;padding-inline:var(--gutter);padding-block:0 96px}
+
+/* ---------- 材料 ---------- */
+.washi{--t:var(--tape-a);position:relative;display:inline-block;max-width:100%;padding:3px 18px 4px;color:var(--tape-ink);font-family:var(--f-disp);font-weight:400;letter-spacing:.06em;line-height:1.35;
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.20) 0 5px,transparent 5px 11px),var(--t);
+  clip-path:polygon(1.4% 0,98.6% 0,100% 12%,98.2% 25%,99.6% 38%,97.9% 52%,100% 66%,98.3% 80%,99.7% 92%,98.6% 100%,1.4% 100%,0 88%,1.9% 75%,.4% 62%,2.1% 48%,0 34%,1.7% 20%,.3% 8%);
+  transform:rotate(var(--rot,-.8deg))}
+.washi.b{--t:var(--tape-b)} .washi.c{--t:var(--tape-c)}
+.washi.sm{font-size:14px;padding:1px 12px 2px}
+.flap{display:inline-flex;gap:2px;font-family:var(--f-type);font-weight:700;font-variant-numeric:tabular-nums;vertical-align:-2px}
+.flap b{position:relative;display:inline-grid;place-items:center;min-width:.74em;height:1.14em;padding:0 .06em;background:var(--flap);color:var(--flap-ink);border-radius:.12em;line-height:1;font-weight:700}
+.flap b::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.5)}
+.paper{background:var(--paper);border-radius:10px;box-shadow:var(--lift)}
+.taped{position:relative}
+.taped::before{content:"";position:absolute;top:-9px;left:22px;width:62px;height:18px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.22) 0 4px,transparent 4px 9px),var(--tp,var(--tape-c));transform:rotate(-4deg);clip-path:polygon(3% 0,97% 0,100% 30%,96% 60%,100% 100%,3% 100%,0 70%,4% 40%,0 10%);z-index:2}
+.seal-stamp{display:inline-grid;place-items:center;background:var(--shu);color:var(--seal-ink);border-radius:5px;font-family:var(--f-disp);box-shadow:inset 0 0 0 2px var(--shu),inset 0 0 0 3.5px var(--seal-ink),0 0 0 2px var(--cut);filter:url(#rough);transform:rotate(var(--sr,-6deg))}
+.mark{background:linear-gradient(transparent 55%,var(--marker) 55% 92%,transparent 92%)}
+
+/* 马克笔色卡格：不规则边 + 笔触纹，颜色永远是内容本身，不随主题变 */
+.sw{--c:#ccc;display:inline-block;flex:none;width:30px;height:24px;background:
+  repeating-linear-gradient(100deg,rgba(255,255,255,.10) 0 2px,transparent 2px 7px),
+  repeating-linear-gradient(100deg,rgba(0,0,0,.05) 0 1px,transparent 1px 9px),var(--c);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80' preserveAspectRatio='none'%3E%3Cpath d='M6 9C24 4 52 7 93 4c3 0 4 2 4 5-1 20 1 40-1 62 0 3-2 5-5 5-30-2-55 1-83 0-3 0-5-2-5-5C5 55 3 32 4 13c0-3 1-4 2-4z'/%3E%3C/svg%3E") center/100% 100% no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80' preserveAspectRatio='none'%3E%3Cpath d='M6 9C24 4 52 7 93 4c3 0 4 2 4 5-1 20 1 40-1 62 0 3-2 5-5 5-30-2-55 1-83 0-3 0-5-2-5-5C5 55 3 32 4 13c0-3 1-4 2-4z'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+.sw-ring{box-shadow:none;filter:drop-shadow(0 0 .5px rgba(0,0,0,.35))}
+/* 笔：色卡格 + 下面一条笔杆标签写色号 */
+.pen{display:inline-flex;flex-direction:column;align-items:stretch;gap:0;flex:none;width:46px;border-radius:6px;background:var(--paper);box-shadow:0 0 0 1px var(--rule),0 1px 2px rgba(40,30,60,.10);padding:4px 4px 0;vertical-align:middle}
+.pen .sw{width:100%;height:24px}
+.pen b{display:block;font-family:var(--f-type);font-weight:700;font-size:12px;line-height:18px;text-align:center;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.pen.mini{width:36px;padding:3px 3px 0;border-radius:5px}
+.pen.mini .sw{height:16px}
+.pen.mini b{font-size:10.5px;line-height:15px}
+.pen.out .sw{opacity:.35}
+.pen.out b{text-decoration:line-through;color:var(--ink-3)}
+.pen.miss b{color:var(--bad)}
+
+/* ---------- 顶栏 ---------- */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;gap:18px;padding-block:12px;margin-inline:calc(-1 * var(--gutter));padding-inline:var(--gutter);background:color-mix(in srgb,var(--desk) 90%,transparent);border-bottom:1px solid var(--rule)}
+@supports (backdrop-filter:blur(8px)) or (-webkit-backdrop-filter:blur(8px)){.bar{background:color-mix(in srgb,var(--desk) 78%,transparent);backdrop-filter:saturate(1.2) blur(12px);-webkit-backdrop-filter:saturate(1.2) blur(12px)}}
+.brand{display:flex;align-items:center;gap:12px;flex:none;min-width:0}
+.brand h1{margin:0;font-size:21px;line-height:1.2;font-weight:400}
+.brand h1 .washi{--rot:-1.2deg;padding:2px 16px 3px;--t:var(--tape-a)}
+.brand p{margin:4px 0 0 4px;font-size:11px;color:var(--ink-3);letter-spacing:.14em}
+.logo{width:48px;height:46px;flex:none;display:block}
+.logo svg{width:100%;height:100%;overflow:visible;display:block}
+.logo .card{filter:drop-shadow(0 2px 2px rgba(30,20,50,.2))}
+.logo .st1,.logo .st2,.logo .st3{stroke-dasharray:40;stroke-dashoffset:40;animation:draw .45s ease-out both}
+.logo .st1{animation-delay:.15s}.logo .st2{animation-delay:.5s}.logo .st3{animation-delay:.85s}
+.logo .mk{filter:drop-shadow(0 2px 2px rgba(20,20,40,.28));animation:mk 1.25s cubic-bezier(.45,0,.3,1) .1s both}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes mk{0%{transform:translate(-14px,-8px)}30%{transform:translate(-6px,-3px)}60%{transform:translate(-3px,3px)}100%{transform:none}}
+.nav{display:flex;gap:6px;margin-inline:auto}
+.nav [role=tab]{display:flex;align-items:center;gap:6px;border:0;background:var(--paper-2);padding:7px 14px 9px 12px;border-radius:7px;font-size:14.5px;color:var(--ink-2);cursor:pointer;white-space:nowrap;position:relative;box-shadow:0 1px 2px rgba(40,30,60,.08)}
+.nav [role=tab] svg{width:18px;height:18px;flex:none}
+.nav [role=tab]:hover{color:var(--ink)}
+.nav [role=tab][aria-selected=true]{background:var(--paper);color:var(--ink);box-shadow:var(--lift);transform:translateY(-2px)}
+.nav [role=tab][aria-selected=true]::after{content:"";position:absolute;left:10px;right:10px;bottom:3px;height:6px;background:var(--marker);border-radius:3px}
+.nav .badge{min-width:17px;height:17px;padding:0 5px;border-radius:3px;background:var(--shu);color:#fff;font-size:10.5px;font-style:normal;line-height:17px;text-align:center;font-variant-numeric:tabular-nums;box-shadow:0 0 0 1.5px var(--cut)}
+.sync{flex:none;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--warn)}
+.sync.cloud::before{background:var(--good)}
+.panel{padding-top:24px}
+
+/* ---------- 通用控件 ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;background:var(--paper);border-radius:8px;padding:8px 15px;font-size:14px;cursor:pointer;white-space:nowrap;line-height:1.35;text-decoration:none;color:var(--ink);box-shadow:0 0 0 1px var(--rule),0 2px 0 rgba(40,30,60,.10)}
+.btn:hover{box-shadow:0 0 0 1px var(--ink-3),0 2px 0 rgba(40,30,60,.12)}
+.btn:active{transform:translateY(1px);box-shadow:0 0 0 1px var(--rule)}
+.btn.primary{background:var(--barrel);color:var(--barrel-ink);box-shadow:0 0 0 2px var(--cut),0 2px 0 rgba(20,20,30,.25)}
+.btn.primary:hover{filter:brightness(1.15)}
+.btn.shu{background:var(--shu);color:#fff;box-shadow:0 0 0 2px var(--cut),0 2px 0 rgba(60,20,10,.25)}
+.btn.small{padding:5px 11px;font-size:13px}
+.btn.quiet{background:transparent;box-shadow:none;color:var(--ink-2)}
+.btn.quiet:hover{color:var(--ink);box-shadow:0 0 0 1px var(--rule)}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn svg{width:16px;height:16px;flex:none}
+.link{border:0;background:none;padding:0;color:var(--ink);text-decoration:underline;text-decoration-color:var(--ink-3);text-underline-offset:3px;cursor:pointer;font-size:13px;white-space:nowrap}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.label{font-size:12.5px;color:var(--ink-2);letter-spacing:.06em}
+input[type=text],input[type=search],input[type=number],input[type=date],textarea,select{width:100%;border:0;background:var(--paper-2);color:var(--ink);border-radius:8px;padding:9px 11px;font-size:16px;box-shadow:inset 0 0 0 1px var(--rule);min-width:0}
+textarea{resize:vertical;line-height:1.7}
+input[type=range]{width:100%;accent-color:var(--ink);margin:2px 0}
+input[type=checkbox]{accent-color:var(--ink);width:17px;height:17px;margin:0}
+input[type=color]{width:44px;height:40px;border:0;padding:0;background:none;cursor:pointer}
+.check{display:inline-flex;align-items:center;gap:7px;font-size:14px;cursor:pointer}
+.hint{font-size:12.5px;color:var(--ink-3);margin:0;line-height:1.6}
+.pills{display:inline-flex;gap:4px;max-width:100%;flex-wrap:wrap}
+.pills button{border:0;background:var(--paper-2);border-radius:6px;padding:5px 12px;font-size:13.5px;color:var(--ink-2);cursor:pointer;white-space:nowrap;box-shadow:0 1px 1px rgba(40,30,60,.08)}
+.pills button[aria-pressed=true]{background:var(--ink);color:var(--paper);box-shadow:0 0 0 2px var(--cut),var(--lift);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:0;background:var(--paper-2);border-radius:999px;padding:3px 12px;font-size:13px;cursor:pointer;color:var(--ink-2);box-shadow:0 1px 1px rgba(40,30,60,.08);white-space:nowrap}
+.chip[aria-pressed=true]{background:var(--marker);color:var(--ink);box-shadow:0 0 0 1.5px var(--ink)}
+.tag{display:inline-block;font-size:12px;color:var(--ink-2);background:var(--paper-2);border-radius:4px;padding:0 7px;line-height:20px;white-space:nowrap}
+.st{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:0 7px;border-radius:3px;white-space:nowrap;line-height:20px}
+.st.good{color:var(--good);background:var(--good-soft)}
+.st.warn{color:var(--warn);background:var(--warn-soft)}
+.st.bad{color:var(--bad);background:var(--bad-soft)}
+.toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) rotate(-.6deg);z-index:80;background:var(--barrel);color:var(--barrel-ink);padding:9px 18px;border-radius:4px;font-size:14px;box-shadow:0 0 0 2px var(--cut),var(--lift-hi);max-width:calc(100vw - 32px)}
+.thinking{color:var(--ink-3);display:flex;align-items:center;gap:8px;margin:0}
+.thinking::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--shu);flex:none;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25;transform:scale(.7)}}
+.x{width:34px;height:34px;border-radius:50%;border:0;background:var(--paper-2);cursor:pointer;font-size:18px;line-height:1;flex:none}
+.banner{position:relative;margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;background:var(--paper);box-shadow:var(--lift);border-radius:4px;padding:12px 16px;font-size:13.5px;transform:rotate(-.25deg)}
+.banner p{margin:0;flex:1 1 300px;min-width:0}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;margin:0 0 16px}
+.sec-head h2{margin:0;font-size:22px;line-height:1.3;font-weight:400}
+.empty-state{background:var(--paper);border-radius:10px;padding:24px 26px;color:var(--ink-2);box-shadow:var(--lift)}
+.empty-state h3{font-family:var(--f-disp);font-weight:400;margin:0 0 6px;font-size:21px;color:var(--ink)}
+.empty-state ol{margin:8px 0 14px;padding-left:1.3em}
+
+/* ---------- 换色 ---------- */
+.swap{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:24px;align-items:start}
+.stage{padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.stage-head{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap}
+.stage-head .washi{font-size:16px;max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stage-head .sp{margin-left:auto}
+.kind{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.cv-wrap{position:relative;align-self:center;max-width:100%;line-height:0;border-radius:4px;box-shadow:0 0 0 3px var(--cut),var(--lift);background:#fff}
+.cv-wrap.over::after{content:"松手换这张";position:absolute;inset:8px;display:grid;place-items:center;border:2px dashed var(--ink);border-radius:6px;font:24px var(--f-disp);color:var(--ink);background:color-mix(in srgb,var(--paper) 70%,transparent);line-height:1.4}
+#swapCv{display:block;cursor:crosshair;touch-action:manipulation;border-radius:4px}
+.pin{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px #000,0 2px 6px rgba(0,0,0,.4);pointer-events:none}
+.busy{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--paper) 55%,transparent);font:15px var(--f-sans);color:var(--ink);line-height:1.5}
+.view-row{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+.pick{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 16px;padding:14px;background:var(--paper-2);border-radius:8px;align-items:start}
+.pick>.sw{width:62px;height:50px}
+.pick h4{margin:0 0 2px;font-size:14px;font-weight:600}
+.pick h4 code{font-family:var(--f-type);font-weight:400;color:var(--ink-3);margin-left:6px}
+.pick ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.pick li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.pick li span{font-size:13.5px;min-width:0}
+.mixline{margin:8px 0 0;font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.side{display:flex;flex-direction:column;gap:20px;min-width:0}
+.src-card{padding:16px;display:flex;flex-direction:column;gap:12px}
+.src-card h3,.pens-card h3,.plan h3{margin:0;font-size:13px;color:var(--shu);letter-spacing:.12em;font-weight:600}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:1.5px dashed var(--ink-3);border-radius:10px;padding:14px;text-align:center;cursor:pointer;color:var(--ink-2);background:var(--paper-2)}
+.drop:hover,.drop.over{border-color:var(--ink);color:var(--ink)}
+.drop b{font-size:15px;color:var(--ink)}
+.drop small{font-size:12px;color:var(--ink-3)}
+.share-parsed{font-size:13px;color:var(--ink-2);background:var(--paper-2);border-radius:6px;padding:6px 10px;margin:0;overflow-wrap:anywhere}
+.pens-card{padding:16px 16px 14px;display:flex;flex-direction:column;gap:12px}
+.pens-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pens-head .flap{font-size:18px}
+.ctl{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px;color:var(--ink-2)}
+.ctl output{font-family:var(--f-type);font-weight:700;color:var(--ink);min-width:2ch;text-align:right}
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.prow{display:grid;grid-template-columns:auto auto auto minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 0;border-top:1px dashed var(--rule)}
+.prow:first-child{border-top:0}
+.prow .src{width:26px;height:30px}
+.prow .ar{color:var(--ink-3);font-size:13px}
+.pinfo{min-width:0;display:flex;flex-direction:column;gap:3px}
+.pinfo b{font-size:14.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pinfo div{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:12px;color:var(--ink-3)}
+.share-bar{display:block;height:4px;border-radius:2px;background:var(--paper-2);overflow:hidden;width:100%}
+.share-bar i{display:block;height:100%;background:var(--ink-3)}
+.prow .more{border:0;background:var(--paper-2);border-radius:6px;padding:4px 9px;font-size:12.5px;cursor:pointer;color:var(--ink-2)}
+.alts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:var(--paper-2);border-radius:8px;margin-top:2px}
+.alts button.pen{cursor:pointer;border:0}
+.alts button.pen[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
+.alts .dl{font-size:10.5px;font-family:var(--f-type);color:var(--ink-3);text-align:center;line-height:14px}
+.side-acts{display:flex;flex-wrap:wrap;gap:8px}
+.side-acts .btn.primary{flex:1 1 100%}
+.plan{margin-top:24px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:14px}
+.plan .look{margin:0;font-size:15px}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;counter-reset:n}
+.steps li{counter-increment:n;background:var(--paper-2);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.steps li::before{content:"第 " counter(n) " 步";font-family:var(--f-disp);color:var(--shu);font-size:14px}
+.steps b{font-size:15px}
+.steps p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.tips{margin:0;padding-left:1.2em;font-size:13.5px;color:var(--ink-2)}
+.ai-err{margin:0;font-size:13.5px;color:var(--bad)}
+
+/* ---------- 想画 / 画过 ---------- */
+.find{display:flex;flex-direction:column;gap:12px;margin-bottom:22px}
+.find-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.find-row input[type=search]{flex:1 1 240px;width:auto}
+.next{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:18px 24px;padding:18px;margin-bottom:26px;align-items:start}
+.next .ph{position:relative}
+.next img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:3px;box-shadow:0 0 0 4px var(--cut),var(--lift);background:var(--paper-2)}
+.next .seal-stamp{position:absolute;right:-10px;top:-12px;width:54px;height:54px;font-size:15px;line-height:1.1;text-align:center;--sr:-9deg}
+.next h3{margin:4px 0 4px;font-size:21px;font-weight:600;line-height:1.35}
+.next .by{margin:0 0 10px;color:var(--ink-3);font-size:13px}
+.penstrip{display:flex;flex-wrap:wrap;gap:5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:26px 20px}
+.icard{position:relative;display:flex;flex-direction:column;gap:9px;padding:12px 12px 12px;text-align:left;border:0;font:inherit;color:inherit;cursor:pointer;min-width:0;transition:transform .16s,box-shadow .16s}
+.icard:hover{transform:translateY(-2px) rotate(-.3deg);box-shadow:var(--lift-hi)}
+.icard .ph{position:relative;display:block}
+.icard img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:3px;background:var(--paper-2)}
+.icard .ph .inset{position:absolute;right:8px;bottom:8px;width:34%;aspect-ratio:4/5;object-fit:cover;border-radius:2px;box-shadow:0 0 0 3px var(--cut),0 3px 8px rgba(0,0,0,.25)}
+.icard h4{margin:0;font-size:15px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.icard .meta{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:12px;color:var(--ink-3)}
+.icard .seal-stamp{position:absolute;right:8px;top:-8px;width:44px;height:44px;font-size:12.5px;line-height:1.1;text-align:center;z-index:3;--sr:-10deg}
+.icard .hearts{color:var(--shu);letter-spacing:1px;font-size:13px}
+.icard .warnline{font-size:12px;color:var(--bad)}
+.icard .noimg{display:grid;place-items:center;aspect-ratio:4/5;background:var(--paper-2);border-radius:3px;color:var(--ink-3);font-size:13px}
+.icard .date{position:absolute;left:8px;top:8px;font-size:13px}
+.stats{display:flex;flex-wrap:wrap;gap:14px;align-items:stretch;margin:0 0 24px}
+.ctr{display:flex;flex-direction:column;gap:2px;background:var(--paper);border-radius:8px;padding:10px 14px;box-shadow:var(--lift)}
+.ctr .flap{font-size:26px}
+.ctr span{font-size:12px;color:var(--ink-3)}
+.toppens{display:flex;flex-direction:column;gap:6px;background:var(--paper);border-radius:8px;padding:10px 14px;box-shadow:var(--lift);min-width:0}
+.toppens span{font-size:12px;color:var(--ink-3)}
+.toppens .penstrip .pen{position:relative}
+.toppens .penstrip i{position:absolute;right:-6px;top:-7px;font-style:normal;font-size:10px;font-family:var(--f-type);font-weight:700;background:var(--shu);color:#fff;border-radius:3px;padding:0 4px;line-height:15px;box-shadow:0 0 0 1.5px var(--cut)}
+
+/* ---------- 我的笔 ---------- */
+.pens-top{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;margin-bottom:18px}
+.pens-top .acts{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.pengrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:14px 10px;padding:18px;background:var(--paper);border-radius:10px;box-shadow:var(--lift)}
+.pengrid .pen{width:100%;cursor:pointer;border:0;padding:5px 5px 0;font:inherit}
+.pengrid .pen .sw{height:40px}
+.pengrid .pen b{font-size:12.5px;line-height:20px}
+.pengrid .pen small{display:block;font-size:10.5px;color:var(--ink-3);text-align:center;line-height:13px;padding-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pengrid .pen.low::after{content:"快没水";position:absolute;left:50%;top:-7px;transform:translateX(-50%);font-size:10px;line-height:15px;padding:0 4px;background:var(--warn);color:#fff;border-radius:3px;white-space:nowrap}
+.pengrid .pen{position:relative}
+.pengrid .pen:hover{box-shadow:0 0 0 1.5px var(--ink),0 2px 6px rgba(0,0,0,.12)}
+.shop{margin-top:22px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.shop h3{margin:0;font-size:15px}
+
+/* ---------- 对话框 ---------- */
+dialog{border:0;border-radius:14px;background:var(--paper);color:var(--ink);padding:0;width:min(860px,calc(100vw - 32px));max-height:calc(100vh - 48px);box-shadow:0 0 0 3px var(--cut),0 24px 64px rgba(10,8,20,.32)}
+dialog::backdrop{background:rgba(20,16,36,.45)}
+.dlg{padding:22px 24px 24px;display:flex;flex-direction:column;gap:16px}
+.dlg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.dlg-head h2{margin:6px 0 0;font-size:19px;line-height:1.3;font-weight:400}
+.dlg-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.imgslots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.slot{display:flex;flex-direction:column;gap:6px;min-width:0}
+.slot .box{position:relative;aspect-ratio:4/5;border-radius:4px;background:var(--paper-2);box-shadow:0 0 0 3px var(--cut),var(--lift);overflow:hidden;cursor:pointer;display:grid;place-items:center;color:var(--ink-3);font-size:13px;text-align:center;padding:0;border:0}
+.slot .box img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--bad-soft);border-radius:8px;padding:8px 12px;font-size:13.5px}
+.done-box{display:flex;flex-direction:column;gap:14px;background:var(--paper-2);border-radius:10px;padding:14px}
+.done-box h3{margin:0;font-family:var(--f-disp);font-weight:400;font-size:18px}
+.pen-edit{display:grid;grid-template-columns:110px minmax(0,1fr);gap:16px;align-items:start}
+.pen-edit .sw{width:110px;height:90px}
+.imp-stage{position:relative;line-height:0;align-self:center;max-width:100%;touch-action:none}
+#impCv{display:block;max-width:100%;max-height:60vh;width:auto;height:auto;border-radius:4px;box-shadow:0 0 0 3px var(--cut),var(--lift)}
+.handle{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:3px solid #fff;background:var(--shu);box-shadow:0 0 0 1.5px #000,0 2px 6px rgba(0,0,0,.4);cursor:grab;touch-action:none;padding:0}
+.handle::after{content:"";position:absolute;inset:9px;border-radius:50%;background:#fff}
+.imp-grid{display:grid;grid-template-columns:repeat(var(--cols,12),minmax(0,1fr));gap:4px;max-height:280px;overflow:auto;padding:2px}
+.imp-grid .pen{width:auto;padding:2px 2px 0}
+.imp-grid .pen .sw{height:16px}
+.imp-grid .pen b{font-size:10px;line-height:14px}
+.imp-ctl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+
+/* ---------- 响应式 ---------- */
+@media (max-width:1020px){
+  .swap{grid-template-columns:1fr}
+  .brand p{display:none}
+}
+@media (max-width:760px){
+  .app{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  .nav{position:fixed;left:0;right:0;bottom:0;z-index:30;margin:0;padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));justify-content:space-around;background:var(--paper);border-top:1px solid var(--rule);gap:2px}
+  .nav [role=tab]{flex-direction:column;gap:2px;padding:4px 6px;font-size:11.5px;border-radius:10px;flex:1;background:none;box-shadow:none}
+  .nav [role=tab] svg{width:23px;height:23px}
+  .nav [role=tab][aria-selected=true]{background:none;box-shadow:none;transform:none}
+  .nav [role=tab][aria-selected=true]::after{left:30%;right:30%;bottom:1px;height:4px}
+  .nav .badge{position:absolute;top:0;left:calc(50% + 6px);min-width:15px;height:15px;line-height:15px;font-size:9.5px;padding:0 4px}
+  .bar{justify-content:space-between;background:var(--desk);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .toast{bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+  dialog{width:100%;max-width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:92vh}
+  .dlg{padding:18px 16px calc(22px + env(safe-area-inset-bottom,0px))}
+  .next{grid-template-columns:110px minmax(0,1fr);gap:14px;padding:14px}
+  .next h3{font-size:17px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px}
+  .icard{padding:8px}
+  .icard h4{font-size:14px}
+  .two{grid-template-columns:1fr}
+  .imp-ctl{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pengrid{grid-template-columns:repeat(auto-fill,minmax(58px,1fr));padding:12px;gap:12px 8px}
+  .pengrid .pen .sw{height:32px}
+}
+@media (max-width:420px){
+  .brand h1{font-size:18px}
+  .pen-edit{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion: reduce){
+  .logo .st1,.logo .st2,.logo .st3,.logo .mk,.thinking::before{animation:none}
+  .logo .st1,.logo .st2,.logo .st3{stroke-dashoffset:0}
+  .icard{transition:none}
+  .icard:hover{transform:none}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs><filter id="rough" x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="11" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/></filter></defs>
+</svg>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><svg viewBox="0 0 48 46">
+        <g class="card"><rect x="2" y="8" width="34" height="34" rx="2" fill="#FFFFFF" stroke="var(--cut)" stroke-width="2" transform="rotate(-4 19 25)"/></g>
+        <path class="st1" d="M7 18c6-1.5 14-2 22-1" stroke="#F25C69" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+        <path class="st2" d="M7 26c6-1.5 14-1.8 22-1.2" stroke="#FFD21F" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+        <path class="st3" d="M7 34c6-1.5 13-1.6 19-1" stroke="#2AA3D6" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+        <g class="mk"><g transform="rotate(40 34 20)"><rect x="29.5" y="-2" width="9" height="20" rx="2.2" fill="#24252C" stroke="var(--cut)" stroke-width="1.6"/><rect x="29.5" y="12" width="9" height="12" rx="1.6" fill="#2AA3D6" stroke="var(--cut)" stroke-width="1.6"/><path d="M31.8 24h4.4l-1 4.6h-2.4z" fill="#2AA3D6" stroke="var(--cut)" stroke-width="1.2" stroke-linejoin="round"/><rect x="31" y="2" width="6" height="5" rx=".8" fill="#FFFFFF"/></g></g>
+      </svg></div>
+      <div><h1><span class="washi">随类换色台</span></h1><p>丙烯马克笔 · 我的色卡</p></div>
+    </div>
+    <nav class="nav" role="tablist" aria-label="工作区">
+      <button role="tab" type="button" id="t-swap" data-tab="swap" aria-controls="p-swap" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="8" height="8" rx="1.5"/><rect x="13" y="12" width="8" height="8" rx="1.5"/><path d="M14 5h3.5a2 2 0 0 1 2 2v2.5M18 7.5l1.5 2 1.5-2M10 19H6.5a2 2 0 0 1-2-2v-2.5M6 16.5l-1.5-2-1.5 2"/></svg><span>换色</span></button>
+      <button role="tab" type="button" id="t-want" data-tab="want" aria-controls="p-want" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3h11v18l-5.5-4-5.5 4z"/></svg><span>想画</span><i class="badge" id="wantBadge" hidden></i></button>
+      <button role="tab" type="button" id="t-done" data-tab="done" aria-controls="p-done" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1.5"/><rect x="6.5" y="5.5" width="11" height="10"/><path d="M6.5 13l3-3 3 3 2-2 3 3"/></svg><span>画过</span></button>
+      <button role="tab" type="button" id="t-pens" data-tab="pens" aria-controls="p-pens" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 3.5l6 6L10 20H4v-6z"/><path d="M12.5 5.5l6 6M4 14l6 6"/></svg><span>我的笔</span></button>
+    </nav>
+    <span class="sync" id="sync">只存在这台设备</span>
+  </header>
+
+  <div id="demoBanner" class="banner taped" hidden>
+    <p><b>现在用的是示例色卡，不是你的笔。</b>把你那套笔的色卡拍一张导进来（或者一支支录），换色时显示的色号才和你手上的笔一样。</p>
+    <span class="row" style="gap:6px"><button class="btn small primary" type="button" data-open-import>拍色卡导入</button><button class="btn small quiet" type="button" id="bannerOff">先看看</button></span>
+  </div>
+
+  <!-- 换色 -->
+  <section id="p-swap" class="panel" role="tabpanel" aria-labelledby="t-swap">
+    <div class="swap">
+      <div class="stage paper">
+        <div class="stage-head">
+          <span class="washi b" id="srcTitle">示例 · 溪涧黄昏</span>
+          <span class="tag" id="srcKind">示例图</span>
+          <label class="btn small sp" for="fileIn">换图</label>
+        </div>
+        <div class="view-row">
+          <div class="pills" role="group" aria-label="看哪一种">
+            <button type="button" data-view="orig" aria-pressed="false">原图</button>
+            <button type="button" data-view="pens" aria-pressed="true">换成我的笔</button>
+            <button type="button" data-view="sketch" aria-pressed="false">画稿</button>
+          </div>
+          <span class="hint" id="viewHint">点图上任意一处，看最接近的是哪支笔</span>
+        </div>
+        <div class="cv-wrap" id="cvWrap">
+          <canvas id="swapCv" width="480" height="600" aria-label="当前图片，点一下取色"></canvas>
+          <i class="pin" id="pin" hidden></i>
+          <div class="busy" id="busy" hidden>正在换成你的笔…</div>
+        </div>
+        <div class="pick" id="pickOut" hidden></div>
+      </div>
+
+      <aside class="side">
+        <div class="paper src-card taped" style="--tp:var(--tape-b)">
+          <h3>换一张图</h3>
+          <div class="pills" role="group" aria-label="这张图是">
+            <button type="button" data-kind="art" aria-pressed="true">别人的画</button>
+            <button type="button" data-kind="photo" aria-pressed="false">我的照片 → 画稿</button>
+          </div>
+          <label class="drop" id="drop" for="fileIn">
+            <b id="dropTitle">选一张图，或拖进来</b>
+            <small id="dropSub">小红书里长按保存图片 / 截图都行，电脑上可以直接粘贴</small>
+          </label>
+          <input type="file" id="fileIn" accept="image/*" hidden>
+          <div class="field" id="shareField">
+            <label class="label" for="shareIn">分享文字（可选，用来自动填标题和链接）</label>
+            <input type="text" id="shareIn" placeholder="粘贴「复制链接」得到的那一段文字" autocomplete="off">
+            <p class="share-parsed" id="shareParsed" hidden></p>
+          </div>
+        </div>
+
+        <div class="paper pens-card">
+          <div class="pens-head">
+            <h3>要用的笔</h3>
+            <span><span class="flap" id="penCount"></span> <span class="hint" style="display:inline">支</span></span>
+          </div>
+          <div class="ctl"><label for="nIn">颜色数</label><input type="range" id="nIn" min="4" max="24" value="10"><output id="nOut" for="nIn">10</output></div>
+          <div class="ctl" id="detailCtl"><label for="detIn">简化</label><input type="range" id="detIn" min="0" max="4" value="1"><output id="detOut" for="detIn">1</output></div>
+          <label class="check"><input type="checkbox" id="onlyHave" checked> 只用手上有的笔（不算「没了」的）</label>
+          <ul class="plist" id="plist"></ul>
+          <div class="side-acts">
+            <button class="btn primary" type="button" id="saveWant">存进「想画」</button>
+            <button class="btn" type="button" id="saveDone">已经画完了，记一笔</button>
+            <button class="btn" type="button" id="aiPlan" hidden>让 Claude 排步骤</button>
+          </div>
+          <p class="hint" id="itemLink" hidden></p>
+        </div>
+      </aside>
+    </div>
+    <div class="plan paper" id="planOut" hidden></div>
+  </section>
+
+  <!-- 想画 -->
+  <section id="p-want" class="panel" role="tabpanel" aria-labelledby="t-want" hidden>
+    <div id="nextBox"></div>
+    <div class="find">
+      <div class="find-row">
+        <input type="search" id="wantQ" placeholder="搜标题、作者、标签，或色号" autocomplete="off" aria-label="搜索想画的">
+        <div class="pills" role="group" aria-label="排序">
+          <button type="button" data-wsort="love" aria-pressed="true">最想画</button>
+          <button type="button" data-wsort="new" aria-pressed="false">最新存的</button>
+        </div>
+      </div>
+      <div class="find-row">
+        <label class="check"><input type="checkbox" id="wantHave"> 只看笔都在的</label>
+        <div class="chips" id="wantTags"></div>
+      </div>
+    </div>
+    <div class="grid" id="wantGrid"></div>
+  </section>
+
+  <!-- 画过 -->
+  <section id="p-done" class="panel" role="tabpanel" aria-labelledby="t-done" hidden>
+    <div class="stats" id="doneStats"></div>
+    <div class="find">
+      <div class="find-row">
+        <input type="search" id="doneQ" placeholder="搜标题、标签、心得，或色号" autocomplete="off" aria-label="搜索画过的">
+        <button class="btn" type="button" id="addDone">记一张画过的</button>
+      </div>
+    </div>
+    <div class="grid" id="doneGrid"></div>
+  </section>
+
+  <!-- 我的笔 -->
+  <section id="p-pens" class="panel" role="tabpanel" aria-labelledby="t-pens" hidden>
+    <div class="pens-top">
+      <span class="washi c" id="penTitle">我的笔</span>
+      <span class="hint" id="penSum" style="display:inline"></span>
+      <div class="acts">
+        <button class="btn primary" type="button" data-open-import>拍色卡导入</button>
+        <button class="btn" type="button" id="openText">文字导入 / 导出</button>
+        <button class="btn" type="button" id="addPen">加一支</button>
+      </div>
+    </div>
+    <div class="find-row" style="margin-bottom:16px">
+      <div class="pills" role="group" aria-label="排序">
+        <button type="button" data-psort="no" aria-pressed="true">按色号</button>
+        <button type="button" data-psort="hue" aria-pressed="false">按色系</button>
+        <button type="button" data-psort="use" aria-pressed="false">最常用</button>
+      </div>
+      <span class="hint">点一支笔可以改颜色、名字，标记快没水 / 没了</span>
+    </div>
+    <div class="pengrid" id="penGrid"></div>
+    <div class="shop paper" id="shop" hidden></div>
+  </section>
+</div>
+
+<!-- 存进想画 / 详情 / 画完 -->
+<dialog id="dlgItem" aria-labelledby="itemH">
+  <form class="dlg" method="dialog" id="itemForm">
+    <div class="dlg-head">
+      <div><span class="washi sm" id="itemKindTag">想画</span><h2 id="itemH">存进「想画」</h2></div>
+      <button class="x" type="button" data-close aria-label="关闭">×</button>
+    </div>
+    <div class="imgslots">
+      <div class="slot"><span class="label">参考图</span><button class="box" type="button" id="refBox">点一下放参考图</button></div>
+      <div class="slot" id="workSlot"><span class="label">我画的</span><button class="box" type="button" id="workBox">点一下放我画的照片</button></div>
+    </div>
+    <input type="file" id="refIn" accept="image/*" hidden>
+    <input type="file" id="workIn" accept="image/*" hidden>
+    <div class="field"><label class="label" for="iTitle">标题</label><input type="text" id="iTitle" autocomplete="off"></div>
+    <div class="two">
+      <div class="field"><label class="label" for="iAuthor">作者 / 出处</label><input type="text" id="iAuthor" autocomplete="off"></div>
+      <div class="field"><label class="label" for="iLink">链接</label><input type="text" id="iLink" autocomplete="off" placeholder="https://"></div>
+    </div>
+    <div class="field"><span class="label">标签</span><div class="chips" id="iTags"></div>
+      <div class="row"><input type="text" id="iTagNew" placeholder="加一个标签" autocomplete="off" style="flex:1 1 160px;width:auto"><button class="btn small" type="button" id="iTagAdd">加</button></div></div>
+    <div class="row" id="loveRow"><span class="label">有多想画</span><div class="pills" role="group" aria-label="有多想画" id="iLove">
+      <button type="button" data-love="1" aria-pressed="false">♥</button><button type="button" data-love="2" aria-pressed="false">♥♥</button><button type="button" data-love="3" aria-pressed="false">♥♥♥</button></div>
+      <label class="check"><input type="checkbox" id="iNext"> 下一张就画它</label></div>
+    <div class="field"><span class="label">用到的笔 <span class="hint" style="display:inline">（点笔可以去掉，下面输入色号可以加）</span></span><div class="penstrip" id="iPens"></div>
+      <div class="row"><input type="text" id="iPenNew" placeholder="色号，多个用空格隔开" autocomplete="off" style="flex:1 1 160px;width:auto"><button class="btn small" type="button" id="iPenAdd">加笔</button></div></div>
+    <div class="field"><label class="label" for="iNote">备注</label><textarea id="iNote" rows="2"></textarea></div>
+    <div class="done-box" id="doneBox" hidden>
+      <h3>画完了</h3>
+      <div class="two">
+        <div class="field"><label class="label" for="dDate">哪天画完的</label><input type="date" id="dDate"></div>
+        <div class="field"><label class="label" for="dMin">画了多久（分钟）</label><input type="number" id="dMin" min="0" step="5" inputmode="numeric"></div>
+      </div>
+      <div class="row"><span class="label">自己打个分</span><div class="pills" role="group" aria-label="自己打分" id="dRate">
+        <button type="button" data-rate="满意" aria-pressed="false">满意</button><button type="button" data-rate="还行" aria-pressed="false">还行</button><button type="button" data-rate="再练练" aria-pressed="false">再练练</button></div></div>
+      <div class="field"><label class="label" for="dNote">这张的心得</label><textarea id="dNote" rows="2" placeholder="比如：天空叠色要等干透再上第二层"></textarea></div>
+    </div>
+    <div class="confirm" id="delConfirm" hidden><span>删掉这一张？删了找不回来。</span><button class="btn small danger" type="button" id="delYes">删掉</button><button class="btn small quiet" type="button" id="delNo">不删</button></div>
+    <div class="dlg-foot">
+      <button class="btn quiet danger" type="button" id="iDel" style="margin-right:auto">删除</button>
+      <button class="btn" type="button" id="iSwap">去换色</button>
+      <button class="btn" type="button" id="iDoneBtn">画完了</button>
+      <button class="btn primary" type="submit" id="iSave">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 笔 -->
+<dialog id="dlgPen" aria-labelledby="penH">
+  <form class="dlg" method="dialog" id="penForm">
+    <div class="dlg-head"><h2 id="penH">改这支笔</h2><button class="x" type="button" data-close aria-label="关闭">×</button></div>
+    <div class="pen-edit">
+      <i class="sw" id="pSw"></i>
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        <div class="two">
+          <div class="field"><label class="label" for="pNo">色号</label><input type="text" id="pNo" autocomplete="off"></div>
+          <div class="field"><label class="label" for="pName">名字</label><input type="text" id="pName" autocomplete="off"></div>
+        </div>
+        <div class="field"><label class="label" for="pHex">颜色</label><div class="row"><input type="color" id="pColor"><input type="text" id="pHex" autocomplete="off" style="flex:1;width:auto;font-family:var(--f-type)"></div></div>
+        <div class="row"><span class="label">状态</span><div class="pills" role="group" aria-label="状态" id="pSt">
+          <button type="button" data-st="ok" aria-pressed="true">有</button><button type="button" data-st="low" aria-pressed="false">快没水</button><button type="button" data-st="out" aria-pressed="false">没了</button></div></div>
+        <p class="hint" id="pUse"></p>
+      </div>
+    </div>
+    <div class="confirm" id="pDelConfirm" hidden><span>从色卡里删掉这支？</span><button class="btn small danger" type="button" id="pDelYes">删掉</button><button class="btn small quiet" type="button" id="pDelNo">不删</button></div>
+    <p class="ai-err" id="pErr" hidden></p>
+    <div class="dlg-foot">
+      <button class="btn quiet danger" type="button" id="pDel" style="margin-right:auto">删除这支</button>
+      <button class="btn" type="button" data-close>取消</button>
+      <button class="btn primary" type="submit">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 拍色卡导入 -->
+<dialog id="dlgImport" aria-labelledby="impH">
+  <div class="dlg">
+    <div class="dlg-head"><div><span class="washi sm c">拍色卡导入</span><h2 id="impH">把你的色卡照片变成色号表</h2></div><button class="x" type="button" data-close aria-label="关闭">×</button></div>
+    <ol class="hint" style="margin:0;padding-left:1.2em">
+      <li>在白纸上把每支笔涂一小格、旁边写色号，排成整齐的行和列，白天自然光下正对着拍。</li>
+      <li>填好几行几列，把四个红点拖到<b>四个角落那一格的正中间</b>。</li>
+      <li>有偏色就点「校正白纸」，再点一下照片上的空白纸。</li>
+    </ol>
+    <label class="drop" for="impIn" id="impDrop"><b>选色卡照片</b><small>一张拍不下可以分几次导，选「追加」</small></label>
+    <input type="file" id="impIn" accept="image/*" hidden>
+    <div id="impWork" hidden style="display:flex;flex-direction:column;gap:14px">
+      <div class="imp-stage" id="impStage"><canvas id="impCv"></canvas></div>
+      <div class="imp-ctl">
+        <div class="field"><label class="label" for="impRows">几行</label><input type="number" id="impRows" min="1" max="30" value="10" inputmode="numeric"></div>
+        <div class="field"><label class="label" for="impCols">几列</label><input type="number" id="impCols" min="1" max="30" value="12" inputmode="numeric"></div>
+        <div class="field"><label class="label" for="impStart">第一格的色号</label><input type="number" id="impStart" min="0" value="1" inputmode="numeric"></div>
+        <div class="field"><label class="label" for="impPre">色号前缀</label><input type="text" id="impPre" placeholder="比如 R、BG" autocomplete="off"></div>
+      </div>
+      <div class="row">
+        <div class="pills" role="group" aria-label="编号顺序"><button type="button" data-order="row" aria-pressed="true">一行一行编号</button><button type="button" data-order="col" aria-pressed="false">一列一列编号</button></div>
+        <button class="btn small" type="button" id="impWhite">校正白纸</button>
+        <button class="btn small" type="button" id="impAI" hidden>让 Claude 认照片上写的色号</button>
+      </div>
+      <p class="hint" id="impMsg"></p>
+      <div class="imp-grid" id="impGrid"></div>
+      <div class="dlg-foot">
+        <button class="btn" type="button" id="impAppend">追加到现有色卡</button>
+        <button class="btn primary" type="button" id="impReplace">替换成这些</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- 文字导入导出 -->
+<dialog id="dlgText" aria-labelledby="txtH">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="txtH">文字导入 / 导出</h2><button class="x" type="button" data-close aria-label="关闭">×</button></div>
+    <p class="hint">一行一支：<code>色号 名字 #颜色</code>，比如 <code>23 樱花粉 #F7B6C8</code>。名字可以不写，颜色必须是 # 开头的 6 位色值。</p>
+    <textarea id="txtArea" rows="12" style="font-family:var(--f-type);font-size:14px"></textarea>
+    <p class="hint" id="txtMsg"></p>
+    <div class="dlg-foot">
+      <button class="btn" type="button" id="txtCopy" style="margin-right:auto">复制全部</button>
+      <button class="btn" type="button" id="txtAppend">追加</button>
+      <button class="btn primary" type="button" id="txtReplace">替换整套</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const plain = o => JSON.parse(JSON.stringify(o));
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const natCmp = (a, b) => String(a).localeCompare(String(b), 'zh', {numeric:true});
+let toastT = 0;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
+function lsGet(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+
+/* ================= 颜色 ================= */
+const LIN = new Float32Array(256);
+for (let i = 0; i < 256; i++) { const c = i / 255; LIN[i] = c <= .04045 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); }
+const fLab = t => t > .008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+function rgb2lab(r, g, b) {
+  const R = LIN[r], G = LIN[g], B = LIN[b];
+  const x = (R * .4124564 + G * .3575761 + B * .1804375) / .95047, y = R * .2126729 + G * .7151522 + B * .0721750, z = (R * .0193339 + G * .1191920 + B * .9503041) / 1.08883;
+  const fx = fLab(x), fy = fLab(y), fz = fLab(z);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+function lab2rgb(L, a, b) {
+  const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200;
+  const inv = t => { const t3 = t * t * t; return t3 > .008856 ? t3 : (t - 16 / 116) / 7.787; };
+  const X = inv(fx) * .95047, Y = inv(fy), Z = inv(fz) * 1.08883;
+  const r = 3.2404542 * X - 1.5371385 * Y - .4985314 * Z, g = -.9692660 * X + 1.8760108 * Y + .0415560 * Z, bb = .0556434 * X - .2040259 * Y + 1.0572252 * Z;
+  const gm = c => { c = Math.max(0, Math.min(1, c)); return Math.round(255 * (c <= .0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - .055)); };
+  return [gm(r), gm(g), gm(bb)];
+}
+const hex2rgb = h => { h = String(h).replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; };
+const rgb2hex = (r, g, b) => '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('').toUpperCase();
+const normHex = h => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h || '').trim()); return m ? '#' + m[1].toUpperCase() : null; };
+const labCache = new Map();
+function hexLab(h) { let v = labCache.get(h); if (!v) { const c = hex2rgb(h); v = rgb2lab(c[0], c[1], c[2]); labCache.set(h, v); } return v; }
+const rad = d => d * Math.PI / 180;
+function dE(l1, l2) {
+  const L1 = l1[0], a1 = l1[1], b1 = l1[2], L2 = l2[0], a2 = l2[1], b2 = l2[2];
+  const C1 = Math.hypot(a1, b1), C2 = Math.hypot(a2, b2), Cb = (C1 + C2) / 2, Cb7 = Math.pow(Cb, 7);
+  const G = .5 * (1 - Math.sqrt(Cb7 / (Cb7 + 6103515625)));
+  const a1p = (1 + G) * a1, a2p = (1 + G) * a2, C1p = Math.hypot(a1p, b1), C2p = Math.hypot(a2p, b2);
+  const hf = (b, a) => { if (a === 0 && b === 0) return 0; const x = Math.atan2(b, a) * 180 / Math.PI; return x < 0 ? x + 360 : x; };
+  const h1p = hf(b1, a1p), h2p = hf(b2, a2p);
+  const dLp = L2 - L1, dCp = C2p - C1p;
+  let dhp = 0;
+  if (C1p * C2p !== 0) { dhp = h2p - h1p; if (dhp > 180) dhp -= 360; else if (dhp < -180) dhp += 360; }
+  const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin(rad(dhp / 2));
+  const Lbp = (L1 + L2) / 2, Cbp = (C1p + C2p) / 2;
+  let hbp = h1p + h2p;
+  if (C1p * C2p !== 0) { if (Math.abs(h1p - h2p) > 180) hbp += hbp < 360 ? 360 : -360; hbp /= 2; }
+  const T = 1 - .17 * Math.cos(rad(hbp - 30)) + .24 * Math.cos(rad(2 * hbp)) + .32 * Math.cos(rad(3 * hbp + 6)) - .20 * Math.cos(rad(4 * hbp - 63));
+  const dTh = 30 * Math.exp(-Math.pow((hbp - 275) / 25, 2));
+  const Cbp7 = Math.pow(Cbp, 7), Rc = 2 * Math.sqrt(Cbp7 / (Cbp7 + 6103515625));
+  const Sl = 1 + .015 * Math.pow(Lbp - 50, 2) / Math.sqrt(20 + Math.pow(Lbp - 50, 2)), Sc = 1 + .045 * Cbp, Sh = 1 + .015 * Cbp * T;
+  const Rt = -Math.sin(rad(2 * dTh)) * Rc;
+  return Math.sqrt(Math.pow(dLp / Sl, 2) + Math.pow(dCp / Sc, 2) + Math.pow(dHp / Sh, 2) + Rt * (dCp / Sc) * (dHp / Sh));
+}
+function quality(d) {
+  if (d < 2.5) return ['good', '几乎一样'];
+  if (d < 5) return ['good', '很接近'];
+  if (d < 9) return ['warn', '差一点'];
+  return ['bad', '偏色'];
+}
+function hueKey(h) { const l = hexLab(h), C = Math.hypot(l[1], l[2]); if (C < 9) return [0, -l[0]]; let a = Math.atan2(l[2], l[1]) * 180 / Math.PI; a = (a + 360 - 15) % 360; return [1, a * 1000 - l[0]]; }
+
+/* ================= 示例色卡（不是用户的笔） ================= */
+const DEMO_PENS = ['白#F7F6F2','暖灰1#D9D4CC','暖灰3#ADA59A','冷灰1#D3D7DB','冷灰3#A1A8B0','冷灰5#6E7680','深灰#45484D','黑#1C1C1E',
+'奶油黄#FFF2B3','浅柠檬黄#FFF27A','柠檬黄#FFE81A','中黄#FFD21F','土黄#E0A82E','橘黄#FFB21F','芥末黄#C9A640','香蕉黄#F7E08A','金黄#F2B705','杏黄#FBD38D',
+'浅橙#FFC48C','橙#FF8A1F','深橙#F26419','橘红#F04E23','珊瑚橙#FF7F5C','杏色#FBC9A6','南瓜橙#E3752B','赭橙#C8692B',
+'朱红#E63A2E','大红#D7262E','正红#C8102E','深红#9E1B32','酒红#7A1F2B','玫红#E0245E','西瓜红#F25C69','番茄红#EE4B3C','砖红#B5442E','胭脂#A8324B',
+'浅粉#FBD3DC','樱花粉#F7B6C8','粉红#F48FB1','桃粉#FF9AA2','蔷薇粉#E8738E','豆沙粉#D49A9A','藕粉#E3B7C1','玫瑰粉#E25D8C','荧光粉#FF4FA3','肉粉#F6C1A9',
+'浅紫#D9C7EC','薰衣草#B9A3DB','丁香紫#C79BD6','紫罗兰#8E5FB5','中紫#6F3FA0','深紫#4B2A7B','葡萄紫#5E2750','紫红#9B2F7A','灰紫#8C7FA3','雾紫#B6AFC9',
+'冰蓝#DDF0FA','浅天蓝#B5DDF2','天蓝#6CC0E8','湖蓝#2AA3D6','孔雀蓝#0A7EA4','钴蓝#1F5FBF','群青#2B3A9B','普蓝#1E2F66','深蓝#17204D','雾霾蓝#8EA6BF','灰蓝#5F7C95','牛仔蓝#3E6A9E','宝蓝#1C4FD8','淡蓝紫#9FB0E6','海军蓝#22305C','蔚蓝#3D8FD9',
+'薄荷蓝#A8E6E0','青#19B5B0','蓝绿#0E8C8C','碧绿#1F9E89','湖绿#5EC4B6','深青#0B5E63',
+'嫩黄绿#E2F0A0','浅草绿#C1E07A','黄绿#9CCB3B','草绿#6DB33F','中绿#2E9A47','翠绿#13A35B','深绿#1F6B3A','墨绿#173F2C','橄榄绿#7A8C35','苔绿#5C6E2E','抹茶绿#A5B866','薄荷绿#B3E5C6','豆绿#92C5A0','灰绿#8FA394','松绿#2F6E5B','军绿#4E5B31','森林绿#24543A','荧光绿#8BE33B',
+'米色#EDE0C8','卡其#CDB48A','浅棕#C49A6C','驼色#A97C50','赭石#A35A2A','熟褐#6E3F1F','生褐#7D5A3C','咖啡#5A3A28','深棕#3E2A1F','焦茶#2E2019',
+'浅肤#FBE3D2','肤色#F5CDB0','暖肤#E9AF8B','深肤#C98A62',
+'荧光黄#F4FF3B','荧光橙#FF7A1A','荧光蓝#3FD0FF','荧光紫#B04DFF','金色#C9A34E','银色#B8BCC2','古铜#9A6B3C','夜蓝#10183A','雾白#ECEEF0','珍珠白#F3EEE6'
+].map((s, i) => { const k = s.indexOf('#'); return {no: String(i + 1), name: s.slice(0, k), hex: s.slice(k), st: 'ok'}; });
+
+/* ================= 数据 ================= */
+const LS = {pal: 'suilei.pal', items: 'suilei.items', img: 'suilei.img.', tab: 'suilei.tab', banner: 'suilei.banner'};
+const Store = {pens: DEMO_PENS.map(p => Object.assign({}, p)), demo: true, items: new Map(), mode: 'local'};
+const memImg = new Map();
+let cloud = null;
+(function loadLocal() {
+  const p = lsGet(LS.pal);
+  if (p && Array.isArray(p.pens) && p.pens.length) { Store.pens = p.pens; Store.demo = !!p.demo; }
+  const it = lsGet(LS.items);
+  if (Array.isArray(it)) it.forEach(o => { if (o && o.id) Store.items.set(o.id, o); });
+})();
+const chains = new Map();
+function serial(key, fn) { const prev = chains.get(key) || Promise.resolve(); const next = prev.catch(() => {}).then(fn); chains.set(key, next); return next; }
+function writeErr(e) {
+  const c = e && e.code;
+  if (c === 'quota_exceeded') toast('存储空间满了，删掉几张旧的再存。');
+  else if (c === 'invalid_argument') toast('没存上：这一条太大了，换一张小一点的图再试。');
+  else toast('没存上，网络好一点再试一次。');
+}
+function persistLocal() {
+  lsSet(LS.pal, {pens: Store.pens, demo: Store.demo});
+  if (!lsSet(LS.items, Array.from(Store.items.values()))) toast('这台设备的存储满了，部分记录没存上。');
+}
+function savePal() {
+  const body = {pens: Store.pens, demo: Store.demo, updated: Date.now()};
+  if (cloud) serial('pal', () => cloud.pal.set(plain(body))).catch(writeErr); else persistLocal();
+  penLabsDirty = true; changed();
+}
+function saveItem(it) {
+  it.updated = Date.now();
+  Store.items.set(it.id, it);
+  if (cloud) serial('it' + it.id, () => cloud.items.doc(it.id).set(plain(it))).catch(writeErr); else persistLocal();
+  changed();
+}
+function deleteItem(id) {
+  Store.items.delete(id);
+  ['ref', 'work'].forEach(k => { const key = id + '_' + k; memImg.delete(key); if (cloud) serial('img' + key, () => cloud.img.doc(key).delete()).catch(() => {}); else lsDel(LS.img + key); });
+  if (cloud) serial('it' + id, () => cloud.items.doc(id).delete()).catch(writeErr); else persistLocal();
+  changed();
+}
+function putImg(key, data) {
+  memImg.set(key, data);
+  if (cloud) return serial('img' + key, () => cloud.img.doc(key).set({d: data})).catch(e => { writeErr(e); throw e; });
+  if (!lsSet(LS.img + key, data)) toast('这台设备存不下大图了，只留了小图。');
+  return Promise.resolve();
+}
+async function getImg(key) {
+  if (memImg.has(key)) return memImg.get(key);
+  if (cloud) { try { const s = await cloud.img.doc(key).get(); if (s.exists) { const d = s.data().d; memImg.set(key, d); return d; } } catch (e) {} return null; }
+  const d = lsGet(LS.img + key); if (d) memImg.set(key, d); return d;
+}
+const newId = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/* ================= Claude 能力 ================= */
+const CL = (window.claude && typeof window.claude.use === 'function') ? window.claude : null;
+let sampleFn = null, imgCaps = null, aiOff = !CL;
+const AI_FATAL = ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'];
+if (CL) {
+  CL.use('sample').then(async s => {
+    if (!s) { aiOff = true; updateAI(); return; }
+    sampleFn = s;
+    try { const lim = await s.limits(); imgCaps = lim && lim.images ? lim.images : null; } catch (e) { imgCaps = null; }
+    updateAI();
+  }).catch(() => { aiOff = true; updateAI(); });
+  initCloud();
+}
+function updateAI() {
+  const ok = !!sampleFn && !aiOff && !!imgCaps;
+  $('#aiPlan').hidden = !ok;
+  $('#impAI').hidden = !ok;
+}
+function aiErr(e) {
+  const code = e && e.code;
+  if (AI_FATAL.includes(code)) { aiOff = true; updateAI(); return '这个页面没有获得使用 Claude 的许可。'; }
+  return ({rate_limited: '请求太频繁或到用量上限了，过一会儿再试。', image_rejected: '这张图没法识别，换一张 JPG 或 PNG。', images_unavailable: '当前环境不能发送图片。', invalid_json: '回答没解析成功，再点一次。', empty_completion: '没有得到回答，再点一次。'})[code] || '连接出了点问题，稍后再试。';
+}
+async function initCloud() {
+  let db = null, user = null, uid = null;
+  try { const r = await Promise.all([CL.use('db'), CL.use('user')]); db = r[0]; user = r[1]; } catch (e) {}
+  if (!db || !user) return;
+  try { uid = await user.id(); } catch (e) {}
+  if (!uid) return;
+  let root;
+  try { root = db.doc('data/users/' + uid + '/suilei'); } catch (e) { return; }
+  const c = {pal: root.collection('cfg').doc('palette'), items: root.collection('items'), img: root.collection('img')};
+  const localPal = lsGet(LS.pal), pendingItems = Array.from(Store.items.values());
+  let firstPal = true, firstItems = true;
+  const fallBack = () => { if (cloud) { cloud = null; Store.mode = 'local'; persistLocal(); changed(); } };
+  c.pal.onSnapshot(snap => {
+    const v = snap.exists ? snap.data() : null;
+    if (firstPal) {
+      firstPal = false; cloud = c; Store.mode = 'cloud';
+      if ((!v || !Array.isArray(v.pens)) && localPal && Array.isArray(localPal.pens) && !localPal.demo) {
+        serial('pal', () => c.pal.set(plain({pens: localPal.pens, demo: false, updated: Date.now()}))).catch(() => {});
+        return;
+      }
+    }
+    if (v && Array.isArray(v.pens) && v.pens.length) { Store.pens = v.pens; Store.demo = !!v.demo; penLabsDirty = true; }
+    lsDel(LS.pal); changed(); Swap.rematch();
+  }, fallBack);
+  c.items.onSnapshot(snap => {
+    const m = new Map();
+    snap.docs.forEach(d => { const v = d.data(); if (v && v.id) m.set(v.id, v); });
+    if (firstItems) {
+      firstItems = false; cloud = c; Store.mode = 'cloud';
+      pendingItems.forEach(o => {
+        if (m.has(o.id)) return;
+        m.set(o.id, o);
+        serial('it' + o.id, () => c.items.doc(o.id).set(plain(o))).catch(() => {});
+        ['ref', 'work'].forEach(k => { const key = o.id + '_' + k, d = lsGet(LS.img + key); if (d) { serial('img' + key, () => c.img.doc(key).set({d})).then(() => lsDel(LS.img + key)).catch(() => {}); } });
+      });
+      lsDel(LS.items);
+    }
+    Store.items = m; changed();
+  }, fallBack);
+}
+
+/* ================= 笔 ================= */
+let penLabsDirty = true, penLabs = [];
+function pensLab() {
+  if (penLabsDirty) { penLabs = Store.pens.map(p => ({p, lab: hexLab(p.hex)})); penLabsDirty = false; }
+  return penLabs;
+}
+const penByNo = no => Store.pens.find(p => p.no === String(no));
+function rankPens(lab, onlyHave, n) {
+  const arr = [];
+  pensLab().forEach(o => { if (onlyHave && o.p.st === 'out') return; arr.push({p: o.p, d: dE(lab, o.lab)}); });
+  arr.sort((a, b) => a.d - b.d);
+  return arr.slice(0, n || 6);
+}
+function bestMix(lab, onlyHave, single) {
+  const L = pensLab().filter(o => !(onlyHave && o.p.st === 'out'));
+  let best = null;
+  for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) {
+    const a = L[i].lab, b = L[j].lab, m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
+    const d = dE(lab, m);
+    if (!best || d < best.d) best = {a: L[i].p, b: L[j].p, d};
+  }
+  return best && best.d < single - 3 ? best : null;
+}
+function penHTML(p, cls, extra) {
+  if (!p) return '';
+  const c = ['pen', cls || '', p.st === 'out' ? 'out' : '', p.st === 'low' ? 'low' : ''].join(' ').trim();
+  return '<span class="' + c + '" title="' + esc(p.no + ' ' + (p.name || '')) + '"><i class="sw" style="--c:' + p.hex + '"></i><b>' + esc(p.no) + '</b>' + (extra || '') + '</span>';
+}
+function itemPenHTML(e) {
+  const p = penByNo(e.no);
+  if (p) return penHTML(p, 'mini');
+  return '<span class="pen mini miss" title="色卡里没有这个色号"><i class="sw" style="--c:' + (e.src || '#ccc') + '"></i><b>' + esc(e.no) + '</b></span>';
+}
+
+/* ================= 图片 ================= */
+function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('img')); i.src = src; }); }
+function toCanvas(src, max) {
+  const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height, s = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, c.width, c.height);
+  return c;
+}
+async function fileToCanvas(file, max) {
+  const url = URL.createObjectURL(file);
+  try { return toCanvas(await loadImg(url), max); } finally { URL.revokeObjectURL(url); }
+}
+function jpeg(src, max, limit) {
+  let cv = toCanvas(src, max), q = .86, d = cv.toDataURL('image/jpeg', q);
+  for (let tries = 0; d.length > limit && tries < 12; tries++) {
+    if (q > .5) q -= .08; else { cv = toCanvas(cv, Math.round(Math.max(cv.width, cv.height) * .8)); q = .7; }
+    d = cv.toDataURL('image/jpeg', q);
+  }
+  return d;
+}
+const toBlob = (cv, q) => new Promise(res => cv.toBlob(b => res(b), 'image/jpeg', q || .85));
+
+/* 示例图：一幅平涂的「溪涧黄昏」，颜色故意和示例色卡差一点点 */
+function demoPainting() {
+  const W = 480, H = 600, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const band = (y0, y1, col, amp) => { x.fillStyle = col; x.beginPath(); x.moveTo(0, y1); for (let i = 0; i <= W; i += 20) x.lineTo(i, y0 + Math.sin(i / 70) * amp); x.lineTo(W, y1); x.closePath(); x.fill(); };
+  x.fillStyle = '#4790D6'; x.fillRect(0, 0, W, H);
+  band(70, H, '#79B9E2', 6); band(130, H, '#BCDBEE', 7); band(185, H, '#F5CBB0', 6); band(225, H, '#FFC28F', 5);
+  x.fillStyle = '#FFF07E'; x.beginPath(); x.arc(330, 228, 30, 0, 7); x.fill();
+  x.fillStyle = '#A4B0E2'; x.beginPath(); x.moveTo(0, 300); x.lineTo(70, 220); x.lineTo(150, 270); x.lineTo(230, 205); x.lineTo(330, 268); x.lineTo(410, 225); x.lineTo(W, 260); x.lineTo(W, 330); x.lineTo(0, 330); x.fill();
+  x.fillStyle = '#627D93'; x.beginPath(); x.moveTo(0, 330); x.lineTo(90, 270); x.lineTo(170, 315); x.lineTo(260, 262); x.lineTo(360, 318); x.lineTo(W, 280); x.lineTo(W, 360); x.lineTo(0, 360); x.fill();
+  x.fillStyle = '#6BB043'; x.beginPath(); x.moveTo(0, 350); x.quadraticCurveTo(240, 320, W, 350); x.lineTo(W, H); x.lineTo(0, H); x.fill();
+  x.fillStyle = '#25563B';
+  const tree = (tx, ty, s) => { x.beginPath(); x.moveTo(tx, ty - 46 * s); x.lineTo(tx + 15 * s, ty); x.lineTo(tx - 15 * s, ty); x.fill(); };
+  [[20, 372, 1.1], [52, 366, .9], [82, 374, 1.2], [118, 362, .8], [370, 362, .9], [404, 372, 1.15], [440, 366, .95], [470, 376, 1.2]].forEach(t => tree(t[0], t[1], t[2]));
+  x.fillStyle = '#2F9A4B'; x.beginPath(); x.moveTo(0, 420); x.quadraticCurveTo(110, 395, 190, 430); x.lineTo(150, H); x.lineTo(0, H); x.fill();
+  x.beginPath(); x.moveTo(W, 420); x.quadraticCurveTo(370, 400, 300, 432); x.lineTo(360, H); x.lineTo(W, H); x.fill();
+  x.fillStyle = '#6EBFE4'; x.beginPath(); x.moveTo(220, 352); x.quadraticCurveTo(250, 352, 262, 356); x.quadraticCurveTo(300, 430, 400, H); x.lineTo(110, H); x.quadraticCurveTo(200, 430, 220, 352); x.fill();
+  x.strokeStyle = '#DCEFF8'; x.lineWidth = 4; x.lineCap = 'round';
+  [[230, 380, 250], [210, 420, 245], [200, 470, 260], [175, 520, 240], [250, 540, 300], [160, 575, 210]].forEach(s => { x.beginPath(); x.moveTo(s[0], s[1]); x.lineTo(s[2], s[1] + 2); x.stroke(); });
+  x.strokeStyle = '#FFC491'; x.lineWidth = 5; [[235, 400, 262], [222, 450, 262], [215, 500, 270]].forEach(s => { x.beginPath(); x.moveTo(s[0], s[1]); x.lineTo(s[2], s[1]); x.stroke(); });
+  const rock = (rx, ry, w, h) => { x.fillStyle = '#A2A8AE'; x.beginPath(); x.ellipse(rx, ry, w, h, 0, Math.PI, 0); x.fill(); x.fillStyle = '#6C7580'; x.beginPath(); x.ellipse(rx + w * .25, ry, w * .7, h * .5, 0, Math.PI, 0); x.fill(); };
+  rock(150, 560, 38, 26); rock(330, 548, 30, 20); rock(395, 590, 46, 30);
+  x.fillStyle = '#F35F6B'; [[60, 470], [90, 500], [40, 530], [420, 480], [440, 520]].forEach(f => { x.beginPath(); x.arc(f[0], f[1], 6, 0, 7); x.fill(); });
+  return c;
+}
+
+/* ================= 换色引擎 ================= */
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function boxBlur(d, w, h, r) {
+  const out = new Uint8ClampedArray(d.length), tmp = new Float32Array(d.length);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let s0 = 0, s1 = 0, s2 = 0, n = 0; for (let k = -r; k <= r; k++) { const xx = Math.min(w - 1, Math.max(0, x + k)), i = (y * w + xx) * 4; s0 += d[i]; s1 += d[i + 1]; s2 += d[i + 2]; n++; } const o = (y * w + x) * 4; tmp[o] = s0 / n; tmp[o + 1] = s1 / n; tmp[o + 2] = s2 / n; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let s0 = 0, s1 = 0, s2 = 0, n = 0; for (let k = -r; k <= r; k++) { const yy = Math.min(h - 1, Math.max(0, y + k)), i = (yy * w + x) * 4; s0 += tmp[i]; s1 += tmp[i + 1]; s2 += tmp[i + 2]; n++; } const o = (y * w + x) * 4; out[o] = s0 / n; out[o + 1] = s1 / n; out[o + 2] = s2 / n; out[o + 3] = 255; }
+  return out;
+}
+function analyze(cv, k, detail) {
+  const W = cv.width, H = cv.height;
+  let d = cv.getContext('2d').getImageData(0, 0, W, H).data;
+  if (detail > 0) { d = boxBlur(d, W, H, Math.min(3, detail)); if (detail > 2) d = boxBlur(d, W, H, 1); }
+  const N = W * H, L = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) { const l = rgb2lab(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]); L[i * 3] = l[0]; L[i * 3 + 1] = l[1]; L[i * 3 + 2] = l[2]; }
+  const rnd = mulberry(1234), step = Math.max(1, Math.floor(N / 30000)), S = [];
+  for (let i = 0; i < N; i += step) S.push(i);
+  const C = [], first = S[Math.floor(rnd() * S.length)];
+  C.push([L[first * 3], L[first * 3 + 1], L[first * 3 + 2]]);
+  const dist = new Float32Array(S.length).fill(Infinity);
+  while (C.length < k) {
+    const c = C[C.length - 1]; let sum = 0;
+    for (let j = 0; j < S.length; j++) { const i = S[j] * 3, e = (L[i] - c[0]) ** 2 + (L[i + 1] - c[1]) ** 2 + (L[i + 2] - c[2]) ** 2; if (e < dist[j]) dist[j] = e; sum += dist[j]; }
+    if (sum === 0) break;
+    let r = rnd() * sum, pick = 0; for (let j = 0; j < S.length; j++) { r -= dist[j]; if (r <= 0) { pick = j; break; } }
+    const i = S[pick] * 3; C.push([L[i], L[i + 1], L[i + 2]]);
+  }
+  const K = C.length, asg = new Uint8Array(S.length);
+  for (let it = 0; it < 14; it++) {
+    const acc = new Float64Array(K * 4);
+    for (let j = 0; j < S.length; j++) { const i = S[j] * 3; let bi = 0, bd = Infinity; for (let c = 0; c < K; c++) { const e = (L[i] - C[c][0]) ** 2 + (L[i + 1] - C[c][1]) ** 2 + (L[i + 2] - C[c][2]) ** 2; if (e < bd) { bd = e; bi = c; } } asg[j] = bi; acc[bi * 4] += L[i]; acc[bi * 4 + 1] += L[i + 1]; acc[bi * 4 + 2] += L[i + 2]; acc[bi * 4 + 3]++; }
+    let move = 0;
+    for (let c = 0; c < K; c++) if (acc[c * 4 + 3]) { const n = acc[c * 4 + 3], nc = [acc[c * 4] / n, acc[c * 4 + 1] / n, acc[c * 4 + 2] / n]; move += Math.abs(nc[0] - C[c][0]) + Math.abs(nc[1] - C[c][1]) + Math.abs(nc[2] - C[c][2]); C[c] = nc; }
+    if (move < .5) break;
+  }
+  let lab = new Uint8Array(N);
+  for (let i = 0; i < N; i++) { let bi = 0, bd = Infinity; for (let c = 0; c < K; c++) { const e = (L[i * 3] - C[c][0]) ** 2 + (L[i * 3 + 1] - C[c][1]) ** 2 + (L[i * 3 + 2] - C[c][2]) ** 2; if (e < bd) { bd = e; bi = c; } } lab[i] = bi; }
+  const passes = detail > 0 ? 1 + Math.min(2, detail) : 1;
+  for (let p = 0; p < passes; p++) lab = majority(lab, W, H, K);
+  const minArea = Math.round(N * [0.00012, 0.0005, 0.0012, 0.0024, 0.004][Math.max(0, Math.min(4, detail))]);
+  lab = mergeSmall(lab, W, H, minArea);
+  const cnt = new Float64Array(K); for (let i = 0; i < N; i++) cnt[lab[i]]++;
+  const centers = C.map((c, i) => { const rgb = lab2rgb(c[0], c[1], c[2]); return {lab: c, hex: rgb2hex(rgb[0], rgb[1], rgb[2]), share: cnt[i] / N, i}; });
+  return {W, H, centers, labels: lab};
+}
+function majority(lab, W, H, K) {
+  const out = new Uint8Array(lab.length), cnt = new Uint8Array(K);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    cnt.fill(0); let bi = lab[y * W + x], bc = 0;
+    for (let dy = -1; dy <= 1; dy++) { const yy = y + dy; if (yy < 0 || yy >= H) continue; for (let dx = -1; dx <= 1; dx++) { const xx = x + dx; if (xx < 0 || xx >= W) continue; const v = lab[yy * W + xx]; cnt[v]++; } }
+    for (let c = 0; c < K; c++) if (cnt[c] > bc) { bc = cnt[c]; bi = c; }
+    out[y * W + x] = cnt[lab[y * W + x]] >= 4 ? lab[y * W + x] : bi;
+  }
+  return out;
+}
+function mergeSmall(lab, W, H, minArea) {
+  if (minArea < 2) return lab;
+  const N = W * H, comp = new Int32Array(N).fill(-1), q = new Int32Array(N);
+  let id = 0;
+  for (let s = 0; s < N; s++) {
+    if (comp[s] !== -1) continue;
+    const v = lab[s]; let head = 0, tail = 0; q[tail++] = s; comp[s] = id;
+    const nb = new Map();
+    while (head < tail) {
+      const p = q[head++], x = p % W, y = (p - x) / W;
+      const look = (n) => { if (comp[n] === -1 && lab[n] === v) { comp[n] = id; q[tail++] = n; } else if (lab[n] !== v) nb.set(lab[n], (nb.get(lab[n]) || 0) + 1); };
+      if (x > 0) look(p - 1); if (x < W - 1) look(p + 1); if (y > 0) look(p - W); if (y < H - 1) look(p + W);
+    }
+    if (tail < minArea && nb.size) { let best = v, bc = -1; nb.forEach((c, k) => { if (c > bc) { bc = c; best = k; } }); for (let j = 0; j < tail; j++) lab[q[j]] = best; }
+    id++;
+  }
+  return lab;
+}
+
+/* ================= 换色状态 ================= */
+const Swap = {
+  work: null, kind: 'art', demo: true, n: 10, detail: 1, onlyHave: true, view: 'pens',
+  res: null, map: [], ov: [], extra: [], itemId: null, share: null, pick: null, cache: {},
+  rematch() { if (this.res) { this.match(); render(); renderSwapList(); } }
+};
+function procMax() { return 640; }
+async function setWork(cv, opts) {
+  Swap.work = toCanvas(cv, 1400);
+  Swap.demo = !!opts.demo; Swap.itemId = opts.itemId || null; Swap.ov = opts.ov || []; Swap.extra = opts.extra || []; Swap.pick = null;
+  Swap.share = opts.share || null; Swap.plan = null;
+  if (opts.kind) setKind(opts.kind, true);
+  if (opts.n) { Swap.n = opts.n; $('#nIn').value = opts.n; $('#nOut').value = opts.n; }
+  if (opts.detail != null) { Swap.detail = opts.detail; $('#detIn').value = opts.detail; $('#detOut').value = opts.detail; }
+  $('#srcTitle').textContent = opts.title || (Swap.kind === 'photo' ? '我的照片' : '参考图');
+  $('#srcKind').textContent = opts.demo ? '示例图' : (Swap.kind === 'photo' ? '照片 → 画稿' : '参考图');
+  $('#pickOut').hidden = true; $('#pin').hidden = true; $('#planOut').hidden = true;
+  const it = Swap.itemId && Store.items.get(Swap.itemId);
+  $('#itemLink').hidden = !it;
+  if (it) $('#itemLink').innerHTML = '正在改「' + esc(it.title || '未命名') + '」的配色，存的时候会更新它。';
+  $('#saveWant').textContent = it ? '更新这张的配色' : '存进「想画」';
+  if (it && it.plan) renderPlan(it.plan);
+  await runAnalyze();
+}
+function setKind(k, silent) {
+  Swap.kind = k;
+  $$('[data-kind]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === k)));
+  $('#dropTitle').textContent = k === 'photo' ? '选一张你拍的照片' : '选一张图，或拖进来';
+  $('#dropSub').textContent = k === 'photo' ? '风景、宠物、食物都行。会简化成色块，再配上你的笔，生成一张数字油画式的画稿' : '小红书里长按保存图片 / 截图都行，电脑上可以直接粘贴';
+  $('#shareField').hidden = k === 'photo';
+  if (!silent) {
+    const det = k === 'photo' ? 2 : 1, n = k === 'photo' ? 12 : 10;
+    Swap.detail = det; $('#detIn').value = det; $('#detOut').value = det;
+    Swap.n = n; $('#nIn').value = n; $('#nOut').value = n;
+    if (k === 'photo' && Swap.view === 'orig') setView('sketch');
+    if (Swap.work && !Swap.demo) runAnalyze();
+  }
+}
+let anaTok = 0;
+async function runAnalyze() {
+  if (!Swap.work) return;
+  const tok = ++anaTok;
+  $('#busy').hidden = false;
+  await new Promise(r => setTimeout(r, 30));
+  if (tok !== anaTok) return;
+  const proc = toCanvas(Swap.work, procMax());
+  try { Swap.res = analyze(proc, Swap.n, Swap.detail); } catch (e) { $('#busy').hidden = true; toast('这张图处理失败了，换一张试试。'); return; }
+  if (tok !== anaTok) return;
+  Swap.cache = {};
+  Swap.match();
+  $('#busy').hidden = true;
+  render(); renderSwapList();
+}
+Swap.match = function () {
+  const r = this.res; if (!r) return;
+  this.map = r.centers.map(c => {
+    const rank = rankPens(c.lab, this.onlyHave, 6);
+    let no = rank[0] ? rank[0].p.no : null;
+    const o = this.ov.find(v => dE(hexLab(v.s), c.lab) < 8);
+    if (o) no = o.no;
+    return {c, rank, no};
+  });
+};
+function groups() {
+  const g = new Map();
+  Swap.map.forEach(m => {
+    if (!m.no || m.c.share < .002) return;
+    let e = g.get(m.no); if (!e) { e = {no: m.no, share: 0, items: []}; g.set(m.no, e); }
+    e.share += m.c.share; e.items.push(m);
+  });
+  const arr = Array.from(g.values()).map(e => { e.items.sort((a, b) => b.c.share - a.c.share); e.main = e.items[0]; return e; });
+  arr.sort((a, b) => b.share - a.share);
+  Swap.extra.forEach(x => { if (!g.has(x.no)) arr.push({no: x.no, share: 0, extra: true, src: x.src, items: []}); });
+  return arr;
+}
+function swapPens() { return groups().map(e => ({no: e.no, share: Math.round(e.share * 1000) / 1000, src: e.main ? e.main.c.hex : e.src})); }
+
+/* ================= 渲染画布 ================= */
+function penForLabel(i) { const m = Swap.map[i]; return m && m.no ? penByNo(m.no) : null; }
+function render() {
+  const cv = $('#swapCv'), r = Swap.res; if (!r) return;
+  const view = Swap.view;
+  const W = r.W, H = r.H;
+  if (view === 'orig') {
+    cv.width = Swap.work.width; cv.height = Swap.work.height;
+    cv.getContext('2d').drawImage(Swap.work, 0, 0);
+    fitCanvas();
+    return;
+  }
+  cv.width = W; cv.height = H;
+  const x = cv.getContext('2d'), im = x.createImageData(W, H), d = im.data, lab = r.labels;
+  const col = Swap.map.map((m, i) => { const p = penForLabel(i); return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
+  if (view === 'pens') {
+    for (let i = 0; i < W * H; i++) { const c = col[lab[i]]; d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255; }
+    x.putImageData(im, 0, 0);
+    fitCanvas();
+    return;
+  }
+  // 画稿：白纸 + 区块边线 + 每块写色号（像数字油画）
+  const tint = col.map(c => [255 - (255 - c[0]) * .12, 255 - (255 - c[1]) * .12, 255 - (255 - c[2]) * .12]);
+  for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+    const i = y * W + xx, v = lab[i];
+    const edge = (xx < W - 1 && lab[i + 1] !== v) || (y < H - 1 && lab[i + W] !== v);
+    const c = edge ? [92, 94, 104] : tint[v];
+    d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255;
+  }
+  x.putImageData(im, 0, 0);
+  const marks = Swap.cache.marks || (Swap.cache.marks = regionMarks(lab, W, H));
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#3A3B44';
+  marks.forEach(m => {
+    const p = penForLabel(m.v); if (!p) return;
+    const fs = Math.max(8, Math.min(18, m.r * 1.15));
+    x.font = '700 ' + fs + 'px "Courier Prime", ui-monospace, monospace';
+    x.fillText(p.no, m.x, m.y);
+  });
+  fitCanvas();
+}
+function fitCanvas() {
+  const cv = $('#swapCv'), host = $('#cvWrap').parentElement; if (!host || !host.clientWidth) return;
+  const ar = cv.width / cv.height, maxW = host.clientWidth - 32, maxH = Math.max(260, window.innerHeight * .72);
+  const w = Math.max(120, Math.min(maxW, maxH * ar));
+  cv.style.width = Math.round(w) + 'px'; cv.style.height = Math.round(w / ar) + 'px';
+}
+window.addEventListener('resize', () => { clearTimeout(fitCanvas.t); fitCanvas.t = setTimeout(fitCanvas, 120); });
+function regionMarks(lab, W, H) {
+  const N = W * H, D = new Uint16Array(N), INF = 60000;
+  for (let i = 0; i < N; i++) D[i] = INF;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (x === 0 || y === 0 || x === W - 1 || y === H - 1 || lab[i - 1] !== lab[i] || lab[i + 1] !== lab[i] || lab[i - W] !== lab[i] || lab[i + W] !== lab[i]) D[i] = 0; }
+  for (let y = 1; y < H; y++) for (let x = 1; x < W - 1; x++) { const i = y * W + x; D[i] = Math.min(D[i], D[i - 1] + 1, D[i - W] + 1, D[i - W - 1] + 1, D[i - W + 1] + 1); }
+  for (let y = H - 2; y >= 0; y--) for (let x = W - 2; x >= 1; x--) { const i = y * W + x; D[i] = Math.min(D[i], D[i + 1] + 1, D[i + W] + 1, D[i + W + 1] + 1, D[i + W - 1] + 1); }
+  const comp = new Int32Array(N).fill(-1), q = new Int32Array(N), marks = [];
+  let id = 0;
+  for (let s = 0; s < N; s++) {
+    if (comp[s] !== -1) continue;
+    const v = lab[s]; let head = 0, tail = 0, best = s; q[tail++] = s; comp[s] = id;
+    while (head < tail) {
+      const p = q[head++], x = p % W;
+      if (D[p] > D[best]) best = p;
+      const nbs = [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, p - W, p + W];
+      for (const n of nbs) if (n >= 0 && n < N && comp[n] === -1 && lab[n] === v) { comp[n] = id; q[tail++] = n; }
+    }
+    if (D[best] >= 5) marks.push({v, x: best % W + .5, y: Math.floor(best / W) + .5, r: D[best]});
+    id++;
+  }
+  return marks;
+}
+
+/* ================= 换色：右侧清单 ================= */
+let openAlt = null;
+function renderSwapList() {
+  const gs = groups(), ul = $('#plist');
+  $('#penCount').innerHTML = flap(gs.length);
+  if (!Store.pens.length) { ul.innerHTML = '<li class="hint">色卡里还没有笔，先去「我的笔」加。</li>'; return; }
+  ul.innerHTML = gs.map(g => {
+    const p = penByNo(g.no);
+    if (g.extra) {
+      return '<li class="prow" data-no="' + esc(g.no) + '"><i class="sw src" style="--c:' + esc(g.src) + '"></i><span class="ar">→</span>' + penHTML(p) +
+        '<div class="pinfo"><b>' + esc(p ? p.name : g.no) + '</b><div><span class="tag">手动加的</span>' + (p && p.st === 'low' ? '<span class="st warn">快没水</span>' : '') + '</div></div><button class="more" type="button" data-rm-extra="' + esc(g.no) + '">去掉</button></li>';
+    }
+    const m = g.main, d = p ? dE(m.c.lab, hexLab(p.hex)) : 99, q = quality(d);
+    let mix = '';
+    if (d >= 8 && p) { const key = 'mix' + m.c.hex; if (!(key in Swap.cache)) Swap.cache[key] = bestMix(m.c.lab, Swap.onlyHave, d); const bm = Swap.cache[key]; if (bm) mix = '<span>可以试 ' + esc(bm.a.no) + ' + ' + esc(bm.b.no) + ' 叠色</span>'; }
+    const alt = openAlt === g.no ? '<div class="alts">' + m.rank.map(r => '<button type="button" class="pen mini" data-alt="' + esc(r.p.no) + '" aria-pressed="' + (r.p.no === g.no) + '" title="' + esc(r.p.name) + '"><i class="sw" style="--c:' + r.p.hex + '"></i><b>' + esc(r.p.no) + '</b><span class="dl">' + r.d.toFixed(1) + '</span></button>').join('') + '<button class="btn small quiet" type="button" data-drop="' + esc(g.no) + '">这个颜色不要</button></div>' : '';
+    return '<li class="prow" data-no="' + esc(g.no) + '"><i class="sw src" style="--c:' + m.c.hex + '" title="原图里的颜色 ' + m.c.hex + '"></i><span class="ar">→</span>' + penHTML(p) +
+      '<div class="pinfo"><b>' + esc(p ? p.name || p.no : g.no) + '</b><div><span class="st ' + q[0] + '">' + q[1] + '</span><span>占 ' + Math.max(1, Math.round(g.share * 100)) + '%</span>' + (p && p.st === 'low' ? '<span class="st warn">快没水</span>' : '') + mix + '</div></div>' +
+      '<button class="more" type="button" data-more="' + esc(g.no) + '" aria-expanded="' + (openAlt === g.no) + '">换</button>' + alt + '</li>';
+  }).join('');
+}
+function flap(n) { return String(n).split('').map(c => '<b>' + c + '</b>').join(''); }
+$('#plist').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.more) { openAlt = openAlt === t.dataset.more ? null : t.dataset.more; renderSwapList(); return; }
+  if (t.dataset.rmExtra) { Swap.extra = Swap.extra.filter(x => x.no !== t.dataset.rmExtra); renderSwapList(); return; }
+  const row = t.closest('.prow'); const g = groups().find(x => x.no === row.dataset.no); if (!g) return;
+  if (t.dataset.alt) {
+    const no = t.dataset.alt;
+    g.items.forEach(m => { Swap.ov = Swap.ov.filter(v => dE(hexLab(v.s), m.c.lab) >= 8); Swap.ov.push({s: m.c.hex, no}); });
+    Swap.match(); openAlt = no; render(); renderSwapList(); return;
+  }
+  if (t.dataset.drop) {
+    g.items.forEach(m => { Swap.ov = Swap.ov.filter(v => dE(hexLab(v.s), m.c.lab) >= 8); Swap.ov.push({s: m.c.hex, no: null}); });
+    Swap.match(); openAlt = null; render(); renderSwapList(); toast('这个颜色先不用了。');
+  }
+});
+
+/* 点图取色 */
+$('#swapCv').addEventListener('click', e => {
+  if (!Swap.work) return;
+  const cv = $('#swapCv'), r = cv.getBoundingClientRect();
+  const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+  if (fx < 0 || fy < 0 || fx > 1 || fy > 1) return;
+  const W = Swap.work.width, H = Swap.work.height, px = Math.round(fx * W), py = Math.round(fy * H), rr = 4;
+  const x0 = Math.max(0, px - rr), y0 = Math.max(0, py - rr), w = Math.min(W - x0, rr * 2 + 1), h = Math.min(H - y0, rr * 2 + 1);
+  const d = Swap.work.getContext('2d').getImageData(x0, y0, w, h).data;
+  let s0 = 0, s1 = 0, s2 = 0, n = 0; for (let i = 0; i < d.length; i += 4) { s0 += d[i]; s1 += d[i + 1]; s2 += d[i + 2]; n++; }
+  const rgb = [Math.round(s0 / n), Math.round(s1 / n), Math.round(s2 / n)], hex = rgb2hex(rgb[0], rgb[1], rgb[2]), lab = rgb2lab(rgb[0], rgb[1], rgb[2]);
+  const pin = $('#pin'); pin.hidden = false; pin.style.left = (fx * 100) + '%'; pin.style.top = (fy * 100) + '%'; pin.style.background = hex;
+  const rank = rankPens(lab, Swap.onlyHave, 3), mix = rank[0] && rank[0].d >= 6 ? bestMix(lab, Swap.onlyHave, rank[0].d) : null;
+  Swap.pick = {hex};
+  const out = $('#pickOut'); out.hidden = false;
+  out.innerHTML = '<i class="sw" style="--c:' + hex + '"></i><div style="min-width:0"><h4>你点的颜色<code>' + hex + '</code></h4><ul>' +
+    rank.map(r => { const q = quality(r.d); return '<li>' + penHTML(r.p, 'mini') + '<span>' + esc(r.p.name || '') + ' <span class="st ' + q[0] + '">' + q[1] + '</span></span><button class="btn small" type="button" data-add-pen="' + esc(r.p.no) + '">加进清单</button></li>'; }).join('') +
+    '</ul>' + (mix ? '<p class="mixline">单支都不太像，可以试 ' + penHTML(mix.a, 'mini') + ' + ' + penHTML(mix.b, 'mini') + ' 叠色</p>' : '') + '</div>';
+});
+$('#pickOut').addEventListener('click', e => {
+  const b = e.target.closest('[data-add-pen]'); if (!b) return;
+  const no = b.dataset.addPen;
+  if (groups().some(g => g.no === no)) { toast(no + ' 已经在清单里了。'); return; }
+  Swap.extra.push({no, src: Swap.pick ? Swap.pick.hex : '#cccccc'}); renderSwapList(); toast('加了 ' + no + '。');
+});
+
+/* 视图、滑块 */
+function setView(v) {
+  Swap.view = v;
+  $$('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+  $('#viewHint').textContent = v === 'sketch' ? '每一块写着该用的色号，可以照着打底稿' : '点图上任意一处，看最接近的是哪支笔';
+  render();
+}
+$$('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+$$('[data-kind]').forEach(b => b.addEventListener('click', () => setKind(b.dataset.kind)));
+let slideT = 0;
+$('#nIn').addEventListener('input', e => { $('#nOut').value = e.target.value; Swap.n = +e.target.value; clearTimeout(slideT); slideT = setTimeout(runAnalyze, 220); });
+$('#detIn').addEventListener('input', e => { $('#detOut').value = e.target.value; Swap.detail = +e.target.value; clearTimeout(slideT); slideT = setTimeout(runAnalyze, 220); });
+$('#onlyHave').addEventListener('change', e => { Swap.onlyHave = e.target.checked; Swap.cache = {marks: Swap.cache.marks}; Swap.rematch(); });
+
+/* 选图 / 拖拽 / 粘贴 */
+async function takeFile(file) {
+  if (!file || !/^image\//.test(file.type)) { toast('这不是图片文件。'); return; }
+  try {
+    const cv = await fileToCanvas(file, 1400);
+    const sh = Swap.kind === 'art' ? parseShare($('#shareIn').value) : null;
+    await setWork(cv, {kind: Swap.kind, title: sh && sh.title ? sh.title : (Swap.kind === 'photo' ? '我的照片' : (file.name || '参考图').replace(/\.[^.]+$/, '')), share: sh});
+    showTab('swap');
+  } catch (e) { toast('这张图打不开，换 JPG 或 PNG 试试。'); }
+}
+$('#fileIn').addEventListener('change', e => { takeFile(e.target.files[0]); e.target.value = ''; });
+['#drop', '#cvWrap'].forEach(sel => {
+  const el = $(sel);
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('over'));
+  el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('over'); takeFile(e.dataTransfer.files[0]); });
+});
+document.addEventListener('paste', e => {
+  if (e.target && e.target.closest && e.target.closest('dialog')) return;
+  const items = Array.from((e.clipboardData && e.clipboardData.items) || []);
+  const img = items.find(i => i.kind === 'file' && /^image\//.test(i.type));
+  if (img) { e.preventDefault(); takeFile(img.getAsFile()); return; }
+  if (e.target.id === 'shareIn') return;
+  const txt = e.clipboardData && e.clipboardData.getData('text');
+  if (txt && /xiaohongshu\.com|xhslink|小红书/.test(txt) && !(e.target.matches && e.target.matches('input,textarea'))) { $('#shareIn').value = txt; onShare(); showTab('swap'); toast('认出了分享文字，再选一张图就行。'); }
+});
+
+/* 小红书分享文字 */
+const TAG_HINT = [[/雨|雨天/, '雨'], [/溪|河|海|湖|水|浪/, '水景'], [/花|樱|玫瑰|郁金香/, '花'], [/天空|云|晚霞|夕阳|日落|黄昏/, '天空'], [/山|森林|树|风景|草原/, '风景'], [/夜|星|月/, '夜景'], [/雪|冬/, '雪'], [/猫|狗|鸟|兔|动物/, '动物'], [/人|女孩|少女/, '人物'], [/房|街|城|建筑/, '建筑'], [/卡通|可爱|Q版/, '卡通']];
+function parseShare(t) {
+  t = String(t || '').trim(); if (!t) return null;
+  const url = (t.match(/https?:\/\/[^\s😆]+/) || [])[0] || '';
+  let inner = (t.match(/【([^】]+)】/) || [])[1] || '';
+  inner = inner.split(/\s*\|\s*/)[0];
+  let title = inner, author = '';
+  const k = inner.lastIndexOf(' - ');
+  if (k > 0) { title = inner.slice(0, k).trim(); author = inner.slice(k + 3).trim(); }
+  if (!title && !url) return null;
+  const tags = []; TAG_HINT.forEach(h => { if (h[0].test(title) && !tags.includes(h[1])) tags.push(h[1]); });
+  return {title, author, url, tags};
+}
+function onShare() {
+  const sh = parseShare($('#shareIn').value), out = $('#shareParsed');
+  if (!sh) { out.hidden = true; return; }
+  out.hidden = false;
+  out.innerHTML = (sh.title ? '<b>' + esc(sh.title) + '</b>' : '') + (sh.author ? ' · ' + esc(sh.author) : '') + (sh.url ? '<br><span class="hint">链接已识别</span>' : '');
+  if (Swap.work && !Swap.demo) { Swap.share = sh; if (sh.title) $('#srcTitle').textContent = sh.title; }
+}
+$('#shareIn').addEventListener('input', onShare);
+
+/* ================= Claude 排步骤 ================= */
+let planAbort = null;
+$('#aiPlan').addEventListener('click', async () => {
+  if (!sampleFn || !Swap.work) return;
+  const box = $('#planOut'); box.hidden = false;
+  box.innerHTML = '<h3>临摹步骤</h3><p class="thinking">Claude 正在看图排步骤…</p><div><button class="btn small quiet" type="button" id="planStop">停</button></div>';
+  if (planAbort) planAbort.abort();
+  planAbort = new AbortController();
+  $('#planStop').onclick = () => planAbort && planAbort.abort();
+  const avail = Store.pens.filter(p => p.st !== 'out').map(p => p.no + ' ' + (p.name || '') + ' ' + p.hex).join('\n');
+  const used = swapPens().map(p => { const pen = penByNo(p.no); return p.no + ' ' + (pen ? pen.name : '') + ' 占' + Math.round(p.share * 100) + '% 原图颜色' + p.src; }).join('\n');
+  const what = Swap.kind === 'photo' ? '一张我自己拍的照片，我想把它画成一幅丙烯马克笔画（平涂色块风格，适合新手到中级）' : '别人画的一幅丙烯马克笔画，我想用我自己的笔临摹';
+  const prompt = '你是丙烯马克笔绘画老师，回答用简体中文。图片是' + what + '。\n\n我手上有的笔（色号 名字 色值）：\n' + avail + '\n\n程序从图里提取了主要颜色，已经对应到我的笔：\n' + used +
+    '\n\n请按丙烯马克笔的真实画法排临摹步骤：先浅后深、先大面积后细节、底色干透再叠色、亮部高光最后用浅色或白色点。每一步只用上面「我手上有的笔」里的色号，优先用程序已经对应好的。\n' +
+    '只返回 JSON：{"look":"一句话说这幅画的配色和画面特点","steps":[{"title":"不超过8个字","pens":["色号"],"how":"一两句具体怎么画，提到区域和笔法"}],"tips":["最多3条注意事项"]}。steps 4 到 7 步。';
+  try {
+    const blob = await toBlob(toCanvas(Swap.work, 1100), .85);
+    const res = await sampleFn.json(prompt, {images: [blob], signal: planAbort.signal, modelTier: 'default'});
+    const plan = cleanPlan(res);
+    if (!plan) throw {code: 'invalid_json'};
+    renderPlan(plan);
+    const it = Swap.itemId && Store.items.get(Swap.itemId);
+    if (it) { it.plan = plan; saveItem(it); } else Swap.plan = plan;
+  } catch (e) {
+    if (e && e.code === 'cancelled') { box.hidden = true; return; }
+    box.innerHTML = '<h3>临摹步骤</h3><p class="ai-err">' + esc(aiErr(e)) + '</p>';
+  }
+});
+function cleanPlan(r) {
+  if (!r || !Array.isArray(r.steps)) return null;
+  const ok = new Set(Store.pens.map(p => p.no));
+  return {look: String(r.look || '').slice(0, 200), steps: r.steps.slice(0, 8).map(s => ({title: String(s.title || '').slice(0, 20), pens: (Array.isArray(s.pens) ? s.pens : []).map(String).filter(n => ok.has(n)).slice(0, 8), how: String(s.how || '').slice(0, 300)})), tips: (Array.isArray(r.tips) ? r.tips : []).slice(0, 3).map(t => String(t).slice(0, 200))};
+}
+function renderPlan(p) {
+  const box = $('#planOut'); box.hidden = false;
+  box.innerHTML = '<h3>临摹步骤</h3>' + (p.look ? '<p class="look">' + esc(p.look) + '</p>' : '') +
+    '<ol class="steps">' + p.steps.map(s => '<li><b>' + esc(s.title) + '</b><div class="penstrip">' + s.pens.map(n => penHTML(penByNo(n), 'mini')).join('') + '</div><p>' + esc(s.how) + '</p></li>').join('') + '</ol>' +
+    (p.tips.length ? '<ul class="tips">' + p.tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '');
+}
+
+/* ================= 想画 / 画过 ================= */
+const wantF = {q: '', sort: 'love', have: false, tag: null};
+const doneF = {q: ''};
+function itemMatches(it, q) {
+  if (!q) return true;
+  q = q.trim().toLowerCase();
+  const hay = [it.title, it.author, it.note, (it.done && it.done.note), (it.tags || []).join(' ')].join(' ').toLowerCase();
+  return q.split(/\s+/).every(w => hay.includes(w) || (it.pens || []).some(p => String(p.no).toLowerCase() === w));
+}
+function missing(it) { return (it.pens || []).filter(e => { const p = penByNo(e.no); return !p || p.st === 'out'; }); }
+function thumbSrc(it, which) { return which === 'work' ? it.workThumb : it.thumb; }
+function hearts(n) { return n ? '<span class="hearts">' + '♥'.repeat(n) + '</span>' : ''; }
+function cardPens(it, max) {
+  const ps = it.pens || [], show = ps.slice(0, max);
+  return '<div class="penstrip">' + show.map(itemPenHTML).join('') + (ps.length > max ? '<span class="tag">+' + (ps.length - max) + '</span>' : '') + '</div>';
+}
+function renderWant() {
+  const all = Array.from(Store.items.values()).filter(i => i.kind === 'want');
+  $('#wantBadge').hidden = !all.length; $('#wantBadge').textContent = all.length;
+  const tags = new Map(); all.forEach(i => (i.tags || []).forEach(t => tags.set(t, (tags.get(t) || 0) + 1)));
+  if (wantF.tag && !tags.has(wantF.tag)) wantF.tag = null;
+  $('#wantTags').innerHTML = Array.from(tags.entries()).sort((a, b) => b[1] - a[1]).map(t => '<button class="chip" type="button" data-wtag="' + esc(t[0]) + '" aria-pressed="' + (wantF.tag === t[0]) + '">' + esc(t[0]) + ' <small>' + t[1] + '</small></button>').join('');
+  const next = all.find(i => i.next);
+  const nb = $('#nextBox');
+  if (next) {
+    const miss = missing(next);
+    nb.innerHTML = '<article class="next paper"><div class="ph">' + (next.thumb ? '<img src="' + next.thumb + '" alt="">' : '<div class="noimg">没有图</div>') + '<span class="seal-stamp">下一<br>张</span></div>' +
+      '<div style="min-width:0;display:flex;flex-direction:column;gap:8px"><span class="washi sm c">下一张就画它</span><h3>' + esc(next.title || '未命名') + '</h3>' + (next.author ? '<p class="by">' + esc(next.author) + '</p>' : '') +
+      cardPens(next, 30) + (miss.length ? '<p class="hint" style="color:var(--bad)">缺 ' + miss.map(m => esc(m.no)).join('、') + '，先补货或者换一支</p>' : '<p class="hint">要用的笔都在手上</p>') +
+      '<div class="row">' + '<button class="btn primary" type="button" data-open="' + next.id + '" data-mode="swap">打开配色</button><button class="btn" type="button" data-open="' + next.id + '" data-mode="done">画完了</button>' + (next.link ? '<a class="btn quiet" href="' + esc(next.link) + '" target="_blank" rel="noopener">看原帖</a>' : '') + '</div></div></article>';
+  } else nb.innerHTML = '';
+  let list = all.filter(i => !i.next && itemMatches(i, wantF.q) && (!wantF.tag || (i.tags || []).includes(wantF.tag)) && (!wantF.have || !missing(i).length));
+  list.sort(wantF.sort === 'love' ? (a, b) => (b.love || 0) - (a.love || 0) || b.created - a.created : (a, b) => b.created - a.created);
+  const g = $('#wantGrid');
+  if (!all.length) {
+    g.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><h3>还没有想画的</h3><ol><li>在小红书看到喜欢的，长按保存图片（顺手「复制链接」）。</li><li>到「换色」选这张图、粘贴分享文字，看看用你的哪些笔。</li><li>点「存进想画」。下次要画的时候在这里一搜就有。</li></ol><button class="btn primary" type="button" data-go="swap">去换色</button></div>';
+    return;
+  }
+  if (!list.length) { g.innerHTML = next && all.length === 1 ? '' : '<p class="hint" style="grid-column:1/-1">没有符合条件的。换个关键词，或者把筛选去掉。</p>'; return; }
+  g.innerHTML = list.map(it => {
+    const miss = missing(it);
+    return '<button class="icard paper" type="button" data-open="' + it.id + '"><span class="ph">' + (it.thumb ? '<img src="' + it.thumb + '" alt="" loading="lazy">' : '<span class="noimg">没有图</span>') + '</span>' +
+      '<h4>' + esc(it.title || '未命名') + '</h4><span class="meta">' + hearts(it.love) + (it.src === 'photo' ? '<span class="tag">我的照片</span>' : '') + (it.author ? '<span>' + esc(it.author) + '</span>' : '') + (it.tags || []).slice(0, 3).map(t => '<span class="tag">' + esc(t) + '</span>').join('') + '</span>' +
+      cardPens(it, 8) + (miss.length ? '<span class="warnline">缺 ' + miss.length + ' 支笔</span>' : '') + '</button>';
+  }).join('');
+}
+function renderDone() {
+  const all = Array.from(Store.items.values()).filter(i => i.kind === 'done');
+  const ym = today().slice(0, 7);
+  const month = all.filter(i => (i.done && i.done.date || '').slice(0, 7) === ym).length;
+  const mins = all.reduce((s, i) => s + (+(i.done && i.done.min) || 0), 0);
+  const use = penUse();
+  const top = Array.from(use.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  $('#doneStats').innerHTML = '<div class="ctr"><span class="flap">' + flap(all.length) + '</span><span>一共画过</span></div><div class="ctr"><span class="flap">' + flap(month) + '</span><span>这个月</span></div>' +
+    (mins ? '<div class="ctr"><span class="flap">' + flap(Math.round(mins / 6) / 10) + '</span><span>小时</span></div>' : '') +
+    (top.length ? '<div class="toppens"><span>最常用的笔</span><div class="penstrip">' + top.map(t => { const p = penByNo(t[0]); return p ? penHTML(p, 'mini', '<i>' + t[1] + '</i>') : ''; }).join('') + '</div></div>' : '');
+  let list = all.filter(i => itemMatches(i, doneF.q)).sort((a, b) => String(b.done && b.done.date || '').localeCompare(String(a.done && a.done.date || '')) || b.updated - a.updated);
+  const g = $('#doneGrid');
+  if (!all.length) { g.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><h3>还没有画过的记录</h3><p>每画完一张，拍一下放进来。会记下日期、用了哪些笔、画了多久，慢慢就能看出自己最常用哪几支、哪支要补货。</p><button class="btn primary" type="button" id="emptyAddDone">记第一张</button></div>'; return; }
+  if (!list.length) { g.innerHTML = '<p class="hint" style="grid-column:1/-1">没有符合条件的。</p>'; return; }
+  g.innerHTML = list.map(it => {
+    const main = it.workThumb || it.thumb, inset = it.workThumb && it.thumb ? '<img class="inset" src="' + it.thumb + '" alt="">' : '';
+    const d = it.done || {};
+    return '<button class="icard paper" type="button" data-open="' + it.id + '">' + (d.rate ? '<span class="seal-stamp">' + esc(d.rate) + '</span>' : '') + '<span class="ph">' + (main ? '<img src="' + main + '" alt="" loading="lazy">' : '<span class="noimg">没有照片</span>') + inset +
+      (d.date ? '<span class="flap date">' + flap(d.date.slice(5).replace('-', '.')) + '</span>' : '') + '</span>' +
+      '<h4>' + esc(it.title || '未命名') + '</h4><span class="meta">' + (d.min ? '<span>' + d.min + ' 分钟</span>' : '') + (it.tags || []).slice(0, 3).map(t => '<span class="tag">' + esc(t) + '</span>').join('') + '</span>' + cardPens(it, 8) + '</button>';
+  }).join('');
+}
+function penUse() { const m = new Map(); Store.items.forEach(i => { if (i.kind === 'done') (i.pens || []).forEach(p => m.set(p.no, (m.get(p.no) || 0) + 1)); }); return m; }
+$('#wantQ').addEventListener('input', e => { wantF.q = e.target.value; renderWant(); });
+$('#doneQ').addEventListener('input', e => { doneF.q = e.target.value; renderDone(); });
+$('#wantHave').addEventListener('change', e => { wantF.have = e.target.checked; renderWant(); });
+$$('[data-wsort]').forEach(b => b.addEventListener('click', () => { wantF.sort = b.dataset.wsort; $$('[data-wsort]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderWant(); }));
+$('#wantTags').addEventListener('click', e => { const b = e.target.closest('[data-wtag]'); if (!b) return; wantF.tag = wantF.tag === b.dataset.wtag ? null : b.dataset.wtag; renderWant(); });
+document.addEventListener('click', e => {
+  const o = e.target.closest('[data-open]');
+  if (o && !o.closest('dialog')) { const it = Store.items.get(o.dataset.open); if (!it) return; if (o.dataset.mode === 'swap') openInSwap(it); else openItem(it, o.dataset.mode === 'done' || it.kind === 'done'); return; }
+  const g = e.target.closest('[data-go]'); if (g) { showTab(g.dataset.go); return; }
+  if (e.target.closest('#emptyAddDone')) { newDone(); return; }
+  if (e.target.closest('[data-open-import]')) { openImport(); return; }
+  if (e.target.closest('[data-close]')) { const d = e.target.closest('dialog'); if (d) d.close(); }
+});
+$('#addDone').addEventListener('click', newDone);
+
+/* ================= 条目对话框 ================= */
+const D = {it: null, isNew: false, refData: null, workData: null, done: false};
+const PRESET_TAGS = ['风景', '天空', '水景', '花', '植物', '动物', '人物', '建筑', '夜景', '雨', '雪', '卡通', '静物'];
+function openItem(it, showDone) {
+  D.it = plain(it); D.isNew = !Store.items.has(it.id); D.refData = null; D.workData = null; D.done = !!showDone || it.kind === 'done';
+  const x = D.it;
+  $('#itemKindTag').textContent = x.kind === 'done' ? '画过' : '想画';
+  $('#itemH').textContent = D.isNew ? (x.kind === 'done' ? '记一张画过的' : '存进「想画」') : (x.title || '未命名');
+  $('#iTitle').value = x.title || ''; $('#iAuthor').value = x.author || ''; $('#iLink').value = x.link || ''; $('#iNote').value = x.note || '';
+  $('#iNext').checked = !!x.next;
+  $$('#iLove [data-love]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.love === (x.love || 0))));
+  const d = x.done || {};
+  $('#dDate').value = d.date || today(); $('#dMin').value = d.min || ''; $('#dNote').value = d.note || '';
+  $$('#dRate [data-rate]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rate === d.rate)));
+  $('#delConfirm').hidden = true; $('#iDel').hidden = D.isNew;
+  $('#iSwap').hidden = !(x.thumb || x.hasRef); $('#iSwap').textContent = '去换色';
+  renderDlg();
+  setSlot('#refBox', x.thumb, '点一下放参考图');
+  setSlot('#workBox', x.workThumb, '点一下放我画的照片');
+  if (x.hasRef) getImg(x.id + '_ref').then(dd => { if (dd && D.it && D.it.id === x.id && !D.refData) setSlot('#refBox', dd); });
+  if (x.hasWork) getImg(x.id + '_work').then(dd => { if (dd && D.it && D.it.id === x.id && !D.workData) setSlot('#workBox', dd); });
+  $('#dlgItem').showModal();
+}
+function renderDlg() {
+  const x = D.it;
+  $('#doneBox').hidden = !D.done; $('#workSlot').hidden = !D.done;
+  $('#iDoneBtn').hidden = D.done; $('#loveRow').hidden = D.done;
+  const tags = Array.from(new Set(PRESET_TAGS.concat(x.tags || [])));
+  $('#iTags').innerHTML = tags.map(t => '<button class="chip" type="button" data-tag="' + esc(t) + '" aria-pressed="' + (x.tags || []).includes(t) + '">' + esc(t) + '</button>').join('');
+  $('#iPens').innerHTML = (x.pens || []).length ? x.pens.map(e => '<button type="button" data-rmpen="' + esc(e.no) + '" style="border:0;background:none;padding:0;cursor:pointer" title="点一下去掉">' + itemPenHTML(e) + '</button>').join('') : '<span class="hint">还没有。去「换色」自动配，或者在下面输入色号。</span>';
+}
+function setSlot(sel, src, empty) { const b = $(sel); b.innerHTML = src ? '<img src="' + src + '" alt="">' : esc(empty || ''); }
+$('#iTags').addEventListener('click', e => { const b = e.target.closest('[data-tag]'); if (!b) return; const t = b.dataset.tag, tags = D.it.tags || (D.it.tags = []); const k = tags.indexOf(t); if (k >= 0) tags.splice(k, 1); else tags.push(t); renderDlg(); });
+$('#iTagNew').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#iTagAdd').click(); } });
+$('#iPenNew').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#iPenAdd').click(); } });
+$('#iTagAdd').addEventListener('click', () => { const v = $('#iTagNew').value.trim(); if (!v) return; const tags = D.it.tags || (D.it.tags = []); if (!tags.includes(v)) tags.push(v); $('#iTagNew').value = ''; renderDlg(); });
+$('#iPens').addEventListener('click', e => { const b = e.target.closest('[data-rmpen]'); if (!b) return; D.it.pens = D.it.pens.filter(p => p.no !== b.dataset.rmpen); renderDlg(); });
+$('#iPenAdd').addEventListener('click', () => {
+  const nos = $('#iPenNew').value.split(/[\s,，、]+/).filter(Boolean), bad = [];
+  D.it.pens = D.it.pens || [];
+  nos.forEach(n => { const p = penByNo(n); if (!p) { bad.push(n); return; } if (!D.it.pens.some(x => x.no === p.no)) D.it.pens.push({no: p.no, share: 0, src: p.hex}); });
+  $('#iPenNew').value = bad.join(' ');
+  if (bad.length) toast('色卡里没有 ' + bad.join('、') + '。');
+  renderDlg();
+});
+$$('#iLove [data-love]').forEach(b => b.addEventListener('click', () => { const v = +b.dataset.love; D.it.love = D.it.love === v ? 0 : v; $$('#iLove [data-love]').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.love === D.it.love))); }));
+$$('#dRate [data-rate]').forEach(b => b.addEventListener('click', () => { const d = D.it.done || (D.it.done = {}); d.rate = d.rate === b.dataset.rate ? '' : b.dataset.rate; $$('#dRate [data-rate]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.rate === d.rate))); }));
+$('#iDoneBtn').addEventListener('click', () => { D.done = true; renderDlg(); $('#workBox').focus(); });
+$('#refBox').addEventListener('click', () => $('#refIn').click());
+$('#workBox').addEventListener('click', () => $('#workIn').click());
+$('#refIn').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const cv = await fileToCanvas(f, 1400); D.refData = {full: jpeg(cv, 1200, 230000), thumb: jpeg(cv, 300, 30000)}; setSlot('#refBox', D.refData.thumb); } catch (er) { toast('这张图打不开。'); } });
+$('#workIn').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const cv = await fileToCanvas(f, 1400); D.workData = {full: jpeg(cv, 1200, 230000), thumb: jpeg(cv, 300, 30000)}; setSlot('#workBox', D.workData.thumb); } catch (er) { toast('这张图打不开。'); } });
+$('#itemForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const x = D.it;
+  x.title = $('#iTitle').value.trim(); x.author = $('#iAuthor').value.trim(); x.link = $('#iLink').value.trim(); x.note = $('#iNote').value.trim();
+  if (D.done) {
+    x.kind = 'done'; x.next = false;
+    const d = x.done || (x.done = {}); d.date = $('#dDate').value || today(); d.min = +$('#dMin').value || 0; d.note = $('#dNote').value.trim();
+  } else {
+    x.next = $('#iNext').checked;
+    if (x.next) Store.items.forEach(o => { if (o.id !== x.id && o.next) { o.next = false; saveItem(o); } });
+  }
+  if (D.refData) { x.thumb = D.refData.thumb; x.hasRef = true; }
+  if (D.workData) { x.workThumb = D.workData.thumb; x.hasWork = true; }
+  saveItem(x);
+  if (D.refData) putImg(x.id + '_ref', D.refData.full).catch(() => {});
+  if (D.workData) putImg(x.id + '_work', D.workData.full).catch(() => {});
+  $('#dlgItem').close();
+  toast(D.done ? '记下了，画得好！' : '存好了。');
+  if (D.done) showTab('done'); else if (D.isNew) showTab('want');
+});
+$('#iDel').addEventListener('click', () => { $('#delConfirm').hidden = false; });
+$('#delNo').addEventListener('click', () => { $('#delConfirm').hidden = true; });
+$('#delYes').addEventListener('click', () => { deleteItem(D.it.id); $('#dlgItem').close(); toast('删掉了。'); });
+$('#iSwap').addEventListener('click', () => { const it = Store.items.get(D.it.id); $('#dlgItem').close(); if (it) openInSwap(it); });
+function newDone() { openItem({id: newId(), kind: 'done', created: Date.now(), pens: [], tags: []}, true); }
+async function openInSwap(it) {
+  let data = it.hasRef ? await getImg(it.id + '_ref') : null;
+  if (!data) data = it.thumb;
+  if (!data) { toast('这一张没有参考图。'); openItem(it); return; }
+  try {
+    const img = await loadImg(data);
+    showTab('swap');
+    await setWork(img, {itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', title: it.title, n: it.n, detail: it.detail, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
+    if (it.plan) renderPlan(it.plan);
+  } catch (e) { toast('图打不开了。'); }
+}
+function fromSwap(kind) {
+  const it0 = Swap.itemId && Store.items.get(Swap.itemId);
+  const sh = Swap.share || {};
+  const x = it0 ? plain(it0) : {id: newId(), kind, created: Date.now(), title: sh.title || (Swap.demo ? '示例 · 溪涧黄昏' : (Swap.kind === 'photo' ? '我的照片' : '')), author: sh.author || '', link: sh.url || '', tags: (sh.tags || []).slice(), love: 0};
+  x.pens = swapPens(); x.n = Swap.n; x.detail = Swap.detail; x.ov = Swap.ov; x.extra = Swap.extra; x.src = Swap.kind;
+  if (Swap.plan && !x.plan) x.plan = Swap.plan;
+  return x;
+}
+$('#saveWant').addEventListener('click', () => {
+  if (!Swap.work) return;
+  const it0 = Swap.itemId && Store.items.get(Swap.itemId);
+  if (it0) { const x = fromSwap(it0.kind); saveItem(x); toast('配色更新了。'); return; }
+  const x = fromSwap('want');
+  openItem(x, false);
+  D.refData = {full: jpeg(Swap.work, 1200, 230000), thumb: jpeg(Swap.work, 300, 30000)};
+  setSlot('#refBox', D.refData.thumb);
+});
+$('#saveDone').addEventListener('click', () => {
+  if (!Swap.work) return;
+  const it0 = Swap.itemId && Store.items.get(Swap.itemId);
+  const x = fromSwap('done');
+  openItem(x, true);
+  if (!it0) { D.refData = {full: jpeg(Swap.work, 1200, 230000), thumb: jpeg(Swap.work, 300, 30000)}; setSlot('#refBox', D.refData.thumb); }
+});
+
+/* ================= 我的笔 ================= */
+let psort = 'no', penEdit = null;
+function renderPens() {
+  const use = penUse();
+  const list = Store.pens.slice();
+  if (psort === 'no') list.sort((a, b) => natCmp(a.no, b.no));
+  else if (psort === 'hue') list.sort((a, b) => { const x = hueKey(a.hex), y = hueKey(b.hex); return x[0] - y[0] || x[1] - y[1]; });
+  else list.sort((a, b) => (use.get(b.no) || 0) - (use.get(a.no) || 0) || natCmp(a.no, b.no));
+  const low = Store.pens.filter(p => p.st === 'low'), out = Store.pens.filter(p => p.st === 'out');
+  $('#penTitle').textContent = Store.demo ? '示例色卡' : '我的笔';
+  $('#penSum').textContent = '共 ' + Store.pens.length + ' 支' + (low.length ? ' · 快没水 ' + low.length : '') + (out.length ? ' · 没了 ' + out.length : '');
+  $('#penGrid').innerHTML = list.length ? list.map(p => '<button type="button" class="pen' + (p.st === 'out' ? ' out' : '') + (p.st === 'low' ? ' low' : '') + '" data-pen="' + esc(p.no) + '"><i class="sw" style="--c:' + p.hex + '"></i><b>' + esc(p.no) + '</b><small>' + esc(p.name || '') + (psort === 'use' && use.get(p.no) ? ' · ' + use.get(p.no) + '次' : '') + '</small></button>').join('') : '<p class="hint">色卡是空的。拍色卡导入，或者点「加一支」。</p>';
+  const shop = $('#shop');
+  if (low.length || out.length) {
+    shop.hidden = false;
+    shop.innerHTML = '<h3>补货清单</h3><div class="penstrip">' + out.concat(low).map(p => penHTML(p, 'mini')).join('') + '</div><div class="row"><button class="btn small" type="button" id="copyShop">复制补货清单</button><span class="hint">没了：' + (out.map(p => p.no).join('、') || '无') + '；快没水：' + (low.map(p => p.no).join('、') || '无') + '</span></div>';
+  } else shop.hidden = true;
+}
+$$('[data-psort]').forEach(b => b.addEventListener('click', () => { psort = b.dataset.psort; $$('[data-psort]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderPens(); }));
+$('#penGrid').addEventListener('click', e => { const b = e.target.closest('[data-pen]'); if (b) openPen(penByNo(b.dataset.pen)); });
+$('#shop').addEventListener('click', e => {
+  if (!e.target.closest('#copyShop')) return;
+  const txt = Store.pens.filter(p => p.st === 'out' || p.st === 'low').map(p => p.no + ' ' + (p.name || '') + (p.st === 'out' ? '（没了）' : '（快没水）')).join('\n');
+  copyText(txt, '补货清单复制好了。');
+});
+function copyText(txt, ok) {
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast(ok), () => { openText(txt); toast('没法直接复制，已经放进文本框，手动全选复制。'); });
+  else { openText(txt); toast('没法直接复制，已经放进文本框，手动全选复制。'); }
+}
+$('#addPen').addEventListener('click', () => openPen(null));
+function openPen(p) {
+  penEdit = p ? p.no : null;
+  const v = p || {no: '', name: '', hex: '#888888', st: 'ok'};
+  $('#penH').textContent = p ? '改这支笔' : '加一支笔';
+  $('#pNo').value = v.no; $('#pName').value = v.name || ''; $('#pHex').value = v.hex; $('#pColor').value = v.hex.toLowerCase(); $('#pSw').style.setProperty('--c', v.hex);
+  $$('#pSt [data-st]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.st === (v.st || 'ok'))));
+  const n = p ? penUse().get(p.no) || 0 : 0;
+  $('#pUse').textContent = p ? (n ? '画过的作品里用了 ' + n + ' 次' : '还没在画过的作品里用过') : '';
+  $('#pDel').hidden = !p; $('#pDelConfirm').hidden = true; $('#pErr').hidden = true;
+  $('#dlgPen').showModal();
+}
+$('#pColor').addEventListener('input', e => { const h = e.target.value.toUpperCase(); $('#pHex').value = h; $('#pSw').style.setProperty('--c', h); });
+$('#pHex').addEventListener('input', e => { const h = normHex(e.target.value); if (h) { $('#pColor').value = h.toLowerCase(); $('#pSw').style.setProperty('--c', h); } });
+$$('#pSt [data-st]').forEach(b => b.addEventListener('click', () => $$('#pSt [data-st]').forEach(x => x.setAttribute('aria-pressed', String(x === b)))));
+$('#penForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const no = $('#pNo').value.trim(), hex = normHex($('#pHex').value), st = ($$('#pSt [aria-pressed=true]')[0] || {}).dataset.st || 'ok';
+  const err = m => { $('#pErr').textContent = m; $('#pErr').hidden = false; };
+  if (!no) return err('色号不能空着。');
+  if (!hex) return err('颜色要写成 # 加 6 位，比如 #F7B6C8。');
+  if (no !== penEdit && penByNo(no)) return err('色号 ' + no + ' 已经有了。');
+  const v = {no, name: $('#pName').value.trim(), hex, st};
+  if (penEdit) { const k = Store.pens.findIndex(p => p.no === penEdit); if (k >= 0) Store.pens[k] = v; } else Store.pens.push(v);
+  savePal(); Swap.rematch();
+  $('#dlgPen').close(); toast('存好了。');
+});
+$('#pDel').addEventListener('click', () => { $('#pDelConfirm').hidden = false; });
+$('#pDelNo').addEventListener('click', () => { $('#pDelConfirm').hidden = true; });
+$('#pDelYes').addEventListener('click', () => { Store.pens = Store.pens.filter(p => p.no !== penEdit); savePal(); Swap.rematch(); $('#dlgPen').close(); toast('删掉了。'); });
+
+/* 文字导入导出 */
+function penText() { return Store.pens.slice().sort((a, b) => natCmp(a.no, b.no)).map(p => p.no + ' ' + (p.name || '') + ' ' + p.hex).join('\n'); }
+function openText(txt) { $('#txtArea').value = txt != null ? txt : penText(); $('#txtMsg').textContent = ''; if (!$('#dlgText').open) $('#dlgText').showModal(); }
+$('#openText').addEventListener('click', () => openText());
+function parseText(t) {
+  const out = [], bad = [];
+  t.split(/\n+/).forEach(line => {
+    line = line.trim(); if (!line) return;
+    const m = line.match(/#?([0-9a-fA-F]{6})\b/);
+    if (!m) { bad.push(line); return; }
+    const rest = (line.slice(0, m.index) + ' ' + line.slice(m.index + m[0].length)).trim().split(/\s+/).filter(Boolean);
+    if (!rest.length) { bad.push(line); return; }
+    out.push({no: rest[0], name: rest.slice(1).join(' '), hex: '#' + m[1].toUpperCase(), st: 'ok'});
+  });
+  return {out, bad};
+}
+function mergePens(list, replace) {
+  if (replace) Store.pens = list.map(p => { const old = penByNo(p.no); return Object.assign({}, p, {st: old ? old.st : 'ok'}); });
+  else list.forEach(p => { const k = Store.pens.findIndex(x => x.no === p.no); if (k >= 0) Store.pens[k] = Object.assign({}, Store.pens[k], {hex: p.hex, name: p.name || Store.pens[k].name}); else Store.pens.push(p); });
+  Store.demo = false; savePal(); Swap.rematch();
+}
+function doText(replace) {
+  const r = parseText($('#txtArea').value);
+  if (!r.out.length) { $('#txtMsg').textContent = '一行都没认出来。每行要有色号和 # 开头的颜色。'; return; }
+  mergePens(r.out, replace);
+  $('#dlgText').close();
+  toast((replace ? '换成了 ' : '加了 ') + r.out.length + ' 支' + (r.bad.length ? '，有 ' + r.bad.length + ' 行没认出来' : '') + '。');
+}
+$('#txtReplace').addEventListener('click', () => doText(true));
+$('#txtAppend').addEventListener('click', () => doText(false));
+$('#txtCopy').addEventListener('click', () => {
+  const t = $('#txtArea').value;
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => toast('复制好了。'), () => { $('#txtArea').select(); toast('请手动全选复制。'); });
+  else { $('#txtArea').select(); toast('请手动全选复制。'); }
+});
+
+/* 拍色卡导入 */
+const Imp = {cv: null, pts: [[.08, .08], [.92, .08], [.08, .92], [.92, .92]], white: null, pickWhite: false, order: 'row', labels: null, cells: []};
+function openImport() { $('#impWork').hidden = !Imp.cv; $('#impMsg').textContent = ''; $('#dlgImport').showModal(); if (Imp.cv) drawImp(); }
+$('#impIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { Imp.cv = await fileToCanvas(f, 1600); Imp.white = null; Imp.labels = null; $('#impWork').hidden = false; setTimeout(drawImp, 30); } catch (er) { toast('这张照片打不开。'); }
+});
+function impCenters() {
+  const R = Math.max(1, +$('#impRows').value || 1), C = Math.max(1, +$('#impCols').value || 1), P = Imp.pts, out = [];
+  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+    const u = C === 1 ? .5 : c / (C - 1), v = R === 1 ? .5 : r / (R - 1);
+    const tx = P[0][0] + (P[1][0] - P[0][0]) * u, ty = P[0][1] + (P[1][1] - P[0][1]) * u, bx = P[2][0] + (P[3][0] - P[2][0]) * u, by = P[2][1] + (P[3][1] - P[2][1]) * u;
+    out.push({r, c, x: tx + (bx - tx) * v, y: ty + (by - ty) * v});
+  }
+  return {R, C, out};
+}
+function drawImp() {
+  const cv = $('#impCv'), src = Imp.cv; if (!src) return;
+  cv.width = src.width; cv.height = src.height;
+  const x = cv.getContext('2d'); x.drawImage(src, 0, 0);
+  const {R, C, out} = impCenters(), W = src.width, H = src.height;
+  const dx = Math.hypot((Imp.pts[1][0] - Imp.pts[0][0]) * W, (Imp.pts[1][1] - Imp.pts[0][1]) * H) / Math.max(1, C - 1);
+  const dy = Math.hypot((Imp.pts[2][0] - Imp.pts[0][0]) * W, (Imp.pts[2][1] - Imp.pts[0][1]) * H) / Math.max(1, R - 1);
+  const rad = Math.max(2, Math.round(Math.min(C > 1 ? dx : 1e9, R > 1 ? dy : 1e9, 200) * .18));
+  const data = src.getContext('2d').getImageData(0, 0, W, H).data;
+  const wb = Imp.white ? Imp.white.map(v => Math.max(.7, Math.min(1.5, 246 / Math.max(1, v)))) : [1, 1, 1];
+  Imp.cells = out.map(o => {
+    const cx = Math.round(o.x * W), cy = Math.round(o.y * H), vals = [[], [], []];
+    for (let yy = cy - rad; yy <= cy + rad; yy += 2) for (let xx = cx - rad; xx <= cx + rad; xx += 2) { if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue; const i = (yy * W + xx) * 4; vals[0].push(data[i]); vals[1].push(data[i + 1]); vals[2].push(data[i + 2]); }
+    const med = a => { if (!a.length) return 200; a.sort((p, q) => p - q); return a[a.length >> 1]; };
+    const rgb = [med(vals[0]) * wb[0], med(vals[1]) * wb[1], med(vals[2]) * wb[2]];
+    return Object.assign({}, o, {hex: rgb2hex(rgb[0], rgb[1], rgb[2])});
+  });
+  x.lineWidth = Math.max(2, W / 400);
+  Imp.cells.forEach(c => { x.strokeStyle = '#fff'; x.beginPath(); x.arc(c.x * W, c.y * H, rad + x.lineWidth, 0, 7); x.stroke(); x.strokeStyle = '#000'; x.beginPath(); x.arc(c.x * W, c.y * H, rad + x.lineWidth * 2, 0, 7); x.stroke(); });
+  const stage = $('#impStage');
+  stage.querySelectorAll('.handle').forEach(h => h.remove());
+  Imp.pts.forEach((p, i) => { const h = document.createElement('button'); h.type = 'button'; h.className = 'handle'; h.dataset.h = i; h.setAttribute('aria-label', ['左上角那一格', '右上角那一格', '左下角那一格', '右下角那一格'][i]); h.style.left = (p[0] * 100) + '%'; h.style.top = (p[1] * 100) + '%'; stage.appendChild(h); });
+  renderImpGrid(R, C);
+}
+function impNo(cell, R, C) {
+  const start = +$('#impStart').value || 0, pre = $('#impPre').value.trim();
+  const idx = Imp.order === 'row' ? cell.r * C + cell.c : cell.c * R + cell.r;
+  const lab = Imp.labels && Imp.labels[cell.r * C + cell.c];
+  return lab ? String(lab) : pre + (start + idx);
+}
+function renderImpGrid(R, C) {
+  const g = $('#impGrid'); g.style.setProperty('--cols', C);
+  g.innerHTML = Imp.cells.map(c => '<span class="pen"><i class="sw" style="--c:' + c.hex + '"></i><b>' + esc(impNo(c, R, C)) + '</b></span>').join('');
+  $('#impMsg').textContent = '一共 ' + Imp.cells.length + ' 格。' + (Imp.white ? '已按白纸校正。' : '') + (Imp.labels ? '色号来自照片上写的字，认错的导入后可以在「我的笔」里改。' : '');
+}
+let dragH = null;
+$('#impStage').addEventListener('pointerdown', e => {
+  const h = e.target.closest('.handle');
+  if (h) { dragH = +h.dataset.h; h.setPointerCapture(e.pointerId); e.preventDefault(); return; }
+  if (Imp.pickWhite && e.target.id === 'impCv') {
+    const r = $('#impCv').getBoundingClientRect(), W = Imp.cv.width, H = Imp.cv.height;
+    const px = Math.round((e.clientX - r.left) / r.width * W), py = Math.round((e.clientY - r.top) / r.height * H);
+    const d = Imp.cv.getContext('2d').getImageData(Math.max(0, px - 6), Math.max(0, py - 6), 13, 13).data;
+    let s = [0, 0, 0], n = 0; for (let i = 0; i < d.length; i += 4) { s[0] += d[i]; s[1] += d[i + 1]; s[2] += d[i + 2]; n++; }
+    Imp.white = s.map(v => v / n); Imp.pickWhite = false; $('#impWhite').textContent = '重新校正白纸'; drawImp();
+  }
+});
+$('#impStage').addEventListener('pointermove', e => {
+  if (dragH == null) return;
+  const r = $('#impCv').getBoundingClientRect();
+  Imp.pts[dragH] = [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))];
+  const h = $('#impStage').querySelector('[data-h="' + dragH + '"]'); if (h) { h.style.left = (Imp.pts[dragH][0] * 100) + '%'; h.style.top = (Imp.pts[dragH][1] * 100) + '%'; }
+  clearTimeout(slideT); slideT = setTimeout(drawImp, 60);
+});
+['pointerup', 'pointercancel'].forEach(t => $('#impStage').addEventListener(t, () => { if (dragH != null) { dragH = null; drawImp(); } }));
+['#impRows', '#impCols'].forEach(s => $(s).addEventListener('input', () => { Imp.labels = null; drawImp(); }));
+['#impStart', '#impPre'].forEach(s => $(s).addEventListener('input', () => { const {R, C} = impCenters(); renderImpGrid(R, C); }));
+$$('[data-order]').forEach(b => b.addEventListener('click', () => { Imp.order = b.dataset.order; $$('[data-order]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); const {R, C} = impCenters(); renderImpGrid(R, C); }));
+$('#impWhite').addEventListener('click', () => { Imp.pickWhite = true; $('#impMsg').textContent = '现在点一下照片上没涂色的白纸。'; });
+$('#impAI').addEventListener('click', async () => {
+  if (!sampleFn || !Imp.cv) return;
+  const {R, C} = impCenters(), btn = $('#impAI');
+  btn.disabled = true; $('#impMsg').innerHTML = '<span class="thinking">Claude 正在认照片上写的色号…</span>';
+  try {
+    const blob = await toBlob(toCanvas(Imp.cv, 1600), .88);
+    const res = await sampleFn.json('图片是一张丙烯马克笔的手绘色卡，每支笔涂了一格，旁边写着它的色号。色卡排成 ' + R + ' 行 ' + C + ' 列（按我框出的范围）。请从左到右、从上到下逐行读出每一格的色号，只返回 JSON：{"labels":["色号",...]}，正好 ' + (R * C) + ' 个，读不清的写空字符串 ""。', {images: [blob], modelTier: 'default'});
+    const labels = res && Array.isArray(res.labels) ? res.labels.map(v => String(v || '').trim().slice(0, 12)) : null;
+    if (!labels || !labels.length) throw {code: 'invalid_json'};
+    Imp.labels = Array.from({length: R * C}, (_, i) => labels[i] || '');
+    renderImpGrid(R, C);
+    const blank = Imp.labels.filter(v => !v).length;
+    if (blank) $('#impMsg').textContent += ' 有 ' + blank + ' 格没认出来，会用自动编号。';
+  } catch (e) { $('#impMsg').textContent = aiErr(e); }
+  btn.disabled = false;
+});
+function doImport(replace) {
+  const {R, C} = impCenters();
+  const seen = new Set(), list = [];
+  Imp.cells.forEach(c => { let no = impNo(c, R, C); if (!no) return; while (seen.has(no)) no = no + '′'; seen.add(no); list.push({no, name: '', hex: c.hex, st: 'ok'}); });
+  if (!list.length) return;
+  mergePens(list, replace);
+  $('#dlgImport').close();
+  toast((replace ? '色卡换成了 ' : '加了 ') + list.length + ' 支。名字可以在「我的笔」里慢慢补。');
+  showTab('pens');
+}
+$('#impReplace').addEventListener('click', () => doImport(true));
+$('#impAppend').addEventListener('click', () => doImport(false));
+
+/* ================= 标签页、总刷新 ================= */
+function showTab(t) {
+  $$('.nav [role=tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+  $$('.panel').forEach(p => { p.hidden = p.id !== 'p-' + t; });
+  lsSet(LS.tab, t);
+  if (t === 'swap' && Swap.res) render();
+}
+$$('.nav [role=tab]').forEach(b => b.addEventListener('click', () => { showTab(b.dataset.tab); window.scrollTo({top: 0}); }));
+function changed() {
+  $('#sync').textContent = Store.mode === 'cloud' ? '已同步' : '只存在这台设备';
+  $('#sync').classList.toggle('cloud', Store.mode === 'cloud');
+  $('#demoBanner').hidden = !Store.demo || lsGet(LS.banner) === 'off';
+  renderWant(); renderDone(); renderPens();
+}
+$('#bannerOff').addEventListener('click', () => { lsSet(LS.banner, 'off'); $('#demoBanner').hidden = true; });
+$$('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+
+(function boot() {
+  changed();
+  const h = (location.hash || '').slice(1), saved = lsGet(LS.tab);
+  const tab = ['swap', 'want', 'done', 'pens'].includes(h) ? h : (['swap', 'want', 'done', 'pens'].includes(saved) ? saved : 'swap');
+  showTab(tab);
+  setWork(demoPainting(), {demo: true, title: '示例 · 溪涧黄昏', kind: 'art'});
+})();
+</script>

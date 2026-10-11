@@ -279,6 +279,28 @@ input[type=color]{width:44px;height:40px;border:0;padding:0;background:none;curs
 .toppens .penstrip .pen{position:relative}
 .toppens .penstrip i{position:absolute;right:-6px;top:-7px;font-style:normal;font-size:10px;font-family:var(--f-type);font-weight:700;background:var(--shu);color:#fff;border-radius:3px;padding:0 4px;line-height:15px;box-shadow:0 0 0 1.5px var(--cut)}
 
+/* 上色过程 */
+.proc{margin-top:24px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.proc-head{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap}
+.proc-head h3{margin:0;font-family:var(--f-disp);font-weight:400;font-size:20px}
+.proc-head .btn{margin-left:auto}
+.proc-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+.pstep{display:flex;flex-direction:column;gap:8px;min-width:0;border:0;background:var(--paper-2);border-radius:8px;padding:10px;text-align:left;font:inherit;color:inherit;cursor:pointer;width:100%}
+.pstep[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
+.pstep canvas{display:block;width:100%;height:auto;border-radius:3px;box-shadow:0 0 0 2px var(--cut),0 1px 3px rgba(0,0,0,.15)}
+.pstep .n{font-family:var(--f-disp);color:var(--shu);font-size:14px}
+.pstep b{font-size:15px}
+.pstep p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+.gen{display:flex;flex-direction:column;gap:10px}
+.gen .btn.primary{align-self:stretch}
+.style-row{display:flex;flex-direction:column;gap:6px}
+.seedcard{padding:16px 18px;margin-bottom:26px;display:flex;flex-direction:column;gap:12px}
+.seedcard h3{margin:0;font-family:var(--f-disp);font-weight:400;font-size:19px}
+.seedthumbs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.seedthumbs figure{margin:0;display:flex;flex-direction:column;gap:4px;min-width:0}
+.seedthumbs img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:3px;box-shadow:0 0 0 3px var(--cut),var(--lift);background:var(--paper-2)}
+.seedthumbs figcaption{font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* 从小红书收集 */
 .collect{padding:18px;margin-bottom:26px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 24px;align-items:center}
 .collect h3{margin:0 0 4px;font-family:var(--f-disp);font-weight:400;font-size:20px}
@@ -409,7 +431,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
     <div class="swap">
       <div class="stage paper">
         <div class="stage-head">
-          <span class="washi b" id="srcTitle">示例 · 溪涧黄昏</span>
+          <span class="washi b" id="srcTitle">随机生成</span>
           <span class="tag" id="srcKind">示例图</span>
           <label class="btn small sp" for="fileIn">换图</label>
         </div>
@@ -435,6 +457,17 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           <div class="pills" role="group" aria-label="这张图是">
             <button type="button" data-kind="art" aria-pressed="true">别人的画</button>
             <button type="button" data-kind="photo" aria-pressed="false">我的照片 → 画稿</button>
+            <button type="button" data-kind="gen" aria-pressed="false">随机生成</button>
+          </div>
+          <div class="gen" id="genBox" hidden>
+            <div class="pills" role="group" aria-label="随机生成的色调" id="moodP">
+              <button type="button" data-mood="sunny" aria-pressed="true">晴空</button>
+              <button type="button" data-mood="blue" aria-pressed="false">蓝调</button>
+              <button type="button" data-mood="dusk" aria-pressed="false">黄昏</button>
+              <button type="button" data-mood="night" aria-pressed="false">夜色</button>
+            </div>
+            <button class="btn primary" type="button" id="genGo">随机来一张</button>
+            <p class="hint">云、电线杆、山、海、松树、小车随机组合成一张平涂插画。颜色全部来自你的笔，画稿和上色顺序一起生成。</p>
           </div>
           <label class="drop" id="drop" for="fileIn">
             <b id="dropTitle">选一张图，或拖进来</b>
@@ -455,17 +488,30 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           </div>
           <div class="ctl"><label for="nIn">颜色数</label><input type="range" id="nIn" min="4" max="24" value="10"><output id="nOut" for="nIn">10</output></div>
           <div class="ctl" id="detailCtl"><label for="detIn">简化</label><input type="range" id="detIn" min="0" max="4" value="1"><output id="detOut" for="detIn">1</output></div>
+          <div class="style-row"><span class="label">风格</span>
+            <div class="pills" role="group" aria-label="风格" id="styleP">
+              <button type="button" data-style="" aria-pressed="true">原色</button>
+              <button type="button" data-style="blue" aria-pressed="false">蓝调</button>
+              <button type="button" data-style="sunny" aria-pressed="false">晴空</button>
+              <button type="button" data-style="dusk" aria-pressed="false">黄昏</button>
+              <button type="button" data-style="night" aria-pressed="false">夜色</button>
+            </div>
+            <p class="hint" id="styleHint">原色：在全部笔里找最接近的。选一个风格，就只用那一组笔，照片会变成平涂插画的感觉。</p>
+          </div>
           <label class="check"><input type="checkbox" id="onlyHave" checked> 只用手上有的笔（不算「没了」的）</label>
           <ul class="plist" id="plist"></ul>
           <div class="side-acts">
             <button class="btn primary" type="button" id="saveWant">存进「想画」</button>
             <button class="btn" type="button" id="saveDone">已经画完了，记一笔</button>
-            <button class="btn" type="button" id="aiPlan" hidden>让 Claude 排步骤</button>
           </div>
           <p class="hint" id="itemLink" hidden></p>
         </div>
       </aside>
     </div>
+    <section class="proc paper" id="procOut" hidden>
+      <div class="proc-head"><h3>上色过程</h3><span class="hint">按这个顺序画。点一步，上面就显示画到这一步的样子。</span><button class="btn small" type="button" id="aiPlan" hidden>让 Claude 细讲每一步</button></div>
+      <ol class="proc-steps" id="procSteps"></ol>
+    </section>
     <div class="plan paper" id="planOut" hidden></div>
   </section>
 
@@ -483,6 +529,11 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
       <div class="xhs" id="xhsLinks"></div>
     </div>
     <input type="file" id="bulkIn" accept="image/*" multiple hidden>
+    <div class="seedcard paper taped" id="seedCard" style="--tp:var(--tape-b)" hidden>
+      <h3>你发给我的 4 张</h3>
+      <div class="seedthumbs" id="seedThumbs"></div>
+      <div class="row"><button class="btn primary" type="button" id="seedAdd">全部加进「想画」</button><button class="btn quiet" type="button" id="seedOff">不用了</button><span class="hint" id="seedMsg"></span></div>
+    </div>
     <div id="nextBox"></div>
     <div class="find">
       <div class="find-row">
@@ -876,14 +927,15 @@ function pensLab() {
   return penLabs;
 }
 const penByNo = no => Store.pens.find(p => p.no === String(no));
-function rankPens(lab, onlyHave, n) {
+function styleOK(p) { return !(typeof Swap !== 'undefined' && Swap.styleSet && !Swap.styleSet.has(p.no)); }
+function rankPens(lab, onlyHave, n, anyStyle) {
   const arr = [];
-  pensLab().forEach(o => { if (onlyHave && o.p.st === 'out') return; arr.push({p: o.p, d: dE(lab, o.lab)}); });
+  pensLab().forEach(o => { if (onlyHave && o.p.st === 'out') return; if (!anyStyle && !styleOK(o.p)) return; arr.push({p: o.p, d: dE(lab, o.lab)}); });
   arr.sort((a, b) => a.d - b.d);
   return arr.slice(0, n || 6);
 }
 function bestMix(lab, onlyHave, single) {
-  const L = pensLab().filter(o => !(onlyHave && o.p.st === 'out'));
+  const L = pensLab().filter(o => !(onlyHave && o.p.st === 'out') && styleOK(o.p));
   let best = null;
   for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) {
     const a = L[i].lab, b = L[j].lab, m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
@@ -925,30 +977,121 @@ function jpeg(src, max, limit) {
 }
 const toBlob = (cv, q) => new Promise(res => cv.toBlob(b => res(b), 'image/jpeg', q || .85));
 
-/* 示例图：一幅平涂的「溪涧黄昏」，颜色故意和示例色卡差一点点 */
-function demoPainting() {
-  const W = 480, H = 600, c = document.createElement('canvas'); c.width = W; c.height = H;
-  const x = c.getContext('2d');
-  const band = (y0, y1, col, amp) => { x.fillStyle = col; x.beginPath(); x.moveTo(0, y1); for (let i = 0; i <= W; i += 20) x.lineTo(i, y0 + Math.sin(i / 70) * amp); x.lineTo(W, y1); x.closePath(); x.fill(); };
-  x.fillStyle = '#4790D6'; x.fillRect(0, 0, W, H);
-  band(70, H, '#79B9E2', 6); band(130, H, '#BCDBEE', 7); band(185, H, '#F5CBB0', 6); band(225, H, '#FFC28F', 5);
-  x.fillStyle = '#FFF07E'; x.beginPath(); x.arc(330, 228, 30, 0, 7); x.fill();
-  x.fillStyle = '#A4B0E2'; x.beginPath(); x.moveTo(0, 300); x.lineTo(70, 220); x.lineTo(150, 270); x.lineTo(230, 205); x.lineTo(330, 268); x.lineTo(410, 225); x.lineTo(W, 260); x.lineTo(W, 330); x.lineTo(0, 330); x.fill();
-  x.fillStyle = '#627D93'; x.beginPath(); x.moveTo(0, 330); x.lineTo(90, 270); x.lineTo(170, 315); x.lineTo(260, 262); x.lineTo(360, 318); x.lineTo(W, 280); x.lineTo(W, 360); x.lineTo(0, 360); x.fill();
-  x.fillStyle = '#6BB043'; x.beginPath(); x.moveTo(0, 350); x.quadraticCurveTo(240, 320, W, 350); x.lineTo(W, H); x.lineTo(0, H); x.fill();
-  x.fillStyle = '#25563B';
-  const tree = (tx, ty, s) => { x.beginPath(); x.moveTo(tx, ty - 46 * s); x.lineTo(tx + 15 * s, ty); x.lineTo(tx - 15 * s, ty); x.fill(); };
-  [[20, 372, 1.1], [52, 366, .9], [82, 374, 1.2], [118, 362, .8], [370, 362, .9], [404, 372, 1.15], [440, 366, .95], [470, 376, 1.2]].forEach(t => tree(t[0], t[1], t[2]));
-  x.fillStyle = '#2F9A4B'; x.beginPath(); x.moveTo(0, 420); x.quadraticCurveTo(110, 395, 190, 430); x.lineTo(150, H); x.lineTo(0, H); x.fill();
-  x.beginPath(); x.moveTo(W, 420); x.quadraticCurveTo(370, 400, 300, 432); x.lineTo(360, H); x.lineTo(W, H); x.fill();
-  x.fillStyle = '#6EBFE4'; x.beginPath(); x.moveTo(220, 352); x.quadraticCurveTo(250, 352, 262, 356); x.quadraticCurveTo(300, 430, 400, H); x.lineTo(110, H); x.quadraticCurveTo(200, 430, 220, 352); x.fill();
-  x.strokeStyle = '#DCEFF8'; x.lineWidth = 4; x.lineCap = 'round';
-  [[230, 380, 250], [210, 420, 245], [200, 470, 260], [175, 520, 240], [250, 540, 300], [160, 575, 210]].forEach(s => { x.beginPath(); x.moveTo(s[0], s[1]); x.lineTo(s[2], s[1] + 2); x.stroke(); });
-  x.strokeStyle = '#FFC491'; x.lineWidth = 5; [[235, 400, 262], [222, 450, 262], [215, 500, 270]].forEach(s => { x.beginPath(); x.moveTo(s[0], s[1]); x.lineTo(s[2], s[1]); x.stroke(); });
-  const rock = (rx, ry, w, h) => { x.fillStyle = '#A2A8AE'; x.beginPath(); x.ellipse(rx, ry, w, h, 0, Math.PI, 0); x.fill(); x.fillStyle = '#6C7580'; x.beginPath(); x.ellipse(rx + w * .25, ry, w * .7, h * .5, 0, Math.PI, 0); x.fill(); };
-  rock(150, 560, 38, 26); rock(330, 548, 30, 20); rock(395, 590, 46, 30);
-  x.fillStyle = '#F35F6B'; [[60, 470], [90, 500], [40, 530], [420, 480], [440, 520]].forEach(f => { x.beginPath(); x.arc(f[0], f[1], 6, 0, 7); x.fill(); });
-  return c;
+/* ================= 随机生成：平涂插画（只用自己的笔） ================= */
+const MOODS = {
+  sunny: {name: '晴空', r: {skyTop: '#1E63C8', sky2: '#3F8FE0', skyLow: '#9CCBEF', band: '#BBE2F1', cloud: '#FFFFFF', shade: '#C6C9E6', shade2: '#93A8D6', far: '#7FA9DA', ground: '#EEF4F8', ground2: '#B9DDF0', dark: '#1C3E78', accent: '#F0663A', accent2: '#F6AC6D', line: '#24304A', light: '#FFFFFF', sun: '#FFF3B0'}},
+  blue: {name: '蓝调', r: {skyTop: '#1F6FA8', sky2: '#4FA3D1', skyLow: '#F6C3BB', band: '#86C3E4', cloud: '#F7D2CB', shade: '#86C3E4', shade2: '#4F8CB8', far: '#2C78A8', ground: '#2F7FAE', ground2: '#1B5A86', dark: '#0F3A5C', accent: '#E43B4B', accent2: '#F6F0E2', line: '#0D2F4D', light: '#F6F0E2', sun: '#F6F0E2'}},
+  dusk: {name: '黄昏', r: {skyTop: '#3D4E8E', sky2: '#8E86C2', skyLow: '#F4B08A', band: '#F7CDB8', cloud: '#F8D9C7', shade: '#C7A4C8', shade2: '#8E86C2', far: '#6C5E93', ground: '#4C4470', ground2: '#352F55', dark: '#231E38', accent: '#E5574A', accent2: '#FFD86E', line: '#1C1830', light: '#FFF1CF', sun: '#FFE08A'}},
+  night: {name: '夜色', r: {skyTop: '#0E1F42', sky2: '#1D3766', skyLow: '#3E5C92', band: '#2A477C', cloud: '#3E5C92', shade: '#2A477C', shade2: '#1D3766', far: '#1A2D55', ground: '#14244A', ground2: '#0D1834', dark: '#081022', accent: '#F2A33E', accent2: '#FFE59A', line: '#050A16', light: '#FFF4C8', sun: '#F7EBB0'}}
+};
+function moodPens(key) {
+  const M = MOODS[key], c = {}, nos = new Set();
+  Object.keys(M.r).forEach(role => { const r = rankPens(hexLab(M.r[role]), true, 1, true)[0]; c[role] = r ? r.p.hex : M.r[role]; if (r) nos.add(r.p.no); });
+  return {c, nos};
+}
+function genScene(key, seed) {
+  const C = moodPens(key).c, R = mulberry(seed), W = 800, H = 1000;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const x = cv.getContext('2d');
+  const rr = (a, b) => a + R() * (b - a), pick = a => a[Math.floor(R() * a.length)];
+  const layout = pick(key === 'sunny' ? ['road', 'road', 'sea', 'hill'] : key === 'blue' ? ['hill', 'hill', 'road', 'sea'] : ['hill', 'sea', 'road']);
+  const hz = layout === 'sea' ? H * rr(.56, .62) : layout === 'road' ? H * rr(.64, .7) : H * rr(.66, .72);
+  const band = (y, col, amp) => { const ph = R() * 9, fq = rr(.004, .009); x.fillStyle = col; x.beginPath(); x.moveTo(0, H); for (let i = 0; i <= W; i += 8) x.lineTo(i, y + Math.sin(i * fq + ph) * amp + Math.sin(i * fq * 2.7 + ph) * amp * .4); x.lineTo(W, H); x.closePath(); x.fill(); };
+  const streak = (y, len, th, col) => { const x0 = rr(-120, W - len * .4); x.fillStyle = col; x.beginPath(); x.moveTo(x0, y); x.quadraticCurveTo(x0 + len * .5, y - th, x0 + len, y + rr(-3, 3)); x.quadraticCurveTo(x0 + len * .5, y + th * .5, x0, y); x.fill(); };
+  const dome = (cx, base, amp, sw, col) => { x.fillStyle = col; x.beginPath(); x.moveTo(0, H); for (let i = 0; i <= W; i += 5) { const d = (i - cx) / sw; x.lineTo(i, base - amp * Math.exp(-d * d) - Math.sin(i * .07) * 2 - Math.sin(i * .021) * 4); } x.lineTo(W, H); x.fill(); };
+  const cumulus = (cx, by, w, h) => {
+    const puffs = [], k = 6 + Math.floor(R() * 5);
+    for (let i = 0; i < k; i++) { const t = i / (k - 1), r = h * (.2 + .3 * Math.sin(Math.PI * t)) * rr(.8, 1.2); puffs.push([cx + (t - .5) * w, by - r * rr(.5, .9), r]); }
+    for (let i = 0, n = 2 + Math.floor(R() * 3); i < n; i++) { const t = rr(.25, .75), r = h * rr(.18, .32); puffs.push([cx + (t - .5) * w, by - h * rr(.5, .85), r]); }
+    x.save(); x.beginPath(); puffs.forEach(p => { x.moveTo(p[0] + p[2], p[1]); x.arc(p[0], p[1], p[2], 0, Math.PI * 2); }); x.rect(cx - w * .5, by - h * .22, w, h * .22); x.clip();
+    x.fillStyle = C.cloud; x.fillRect(cx - w, by - h * 2, w * 2, h * 2.3);
+    x.fillStyle = C.shade; puffs.forEach(p => { x.beginPath(); x.arc(p[0] + p[2] * .3, p[1] + p[2] * .6, p[2] * .78, 0, 7); x.fill(); });
+    x.fillStyle = C.cloud; puffs.forEach(p => { x.beginPath(); x.arc(p[0] - p[2] * .18, p[1] - p[2] * .22, p[2] * .58, 0, 7); x.fill(); });
+    x.fillStyle = C.shade2; x.beginPath(); x.moveTo(cx - w, by + 60);
+    for (let i = 0; i <= 24; i++) x.lineTo(cx - w * .6 + w * 1.2 * i / 24, by - h * (.06 + .06 * Math.abs(Math.sin(i * 1.3 + seed))));
+    x.lineTo(cx + w, by + 60); x.fill(); x.restore();
+  };
+  const pine = (px, by, h, col) => { x.fillStyle = col; const tiers = 7 + Math.floor(R() * 4); x.beginPath(); for (let i = 0; i < tiers; i++) { const t = i / tiers, y = by - h * t, w = h * .27 * (1 - t) + 5; x.moveTo(px - w - rr(0, 6), y + 2); x.lineTo(px, y - h / tiers * 2); x.lineTo(px + w + rr(0, 6), y + 2); } x.fill(); x.fillRect(px - 3, by - 4, 6, 10); };
+  const roundTree = (cx, by, r, col) => { x.fillStyle = col; x.fillRect(cx - 6, by - r * .9, 12, r * .9); for (let i = 0; i < 14; i++) { const a = rr(0, Math.PI * 2), d = rr(0, r * .8); x.beginPath(); x.arc(cx + Math.cos(a) * d, by - r * 1.7 + Math.sin(a) * d * 1.2, r * rr(.35, .55), 0, 7); x.fill(); } };
+  const pole = (px, top, bot, s) => { x.fillStyle = C.line; x.fillRect(px - 5 * s, top, 10 * s, bot - top); x.fillRect(px - 46 * s, top + 22 * s, 92 * s, 7 * s); x.fillRect(px - 34 * s, top + 50 * s, 68 * s, 6 * s); [-40, -14, 14, 40].forEach(o => x.fillRect(px + o * s - 3 * s, top + 13 * s, 6 * s, 10 * s)); return [[px - 40 * s, top + 22 * s], [px + 40 * s, top + 22 * s], [px - 28 * s, top + 50 * s], [px + 28 * s, top + 50 * s]]; };
+  const wire = (a, b, sag) => { x.strokeStyle = C.line; x.lineWidth = 3; x.beginPath(); x.moveTo(a[0], a[1]); x.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + sag, b[0], b[1]); x.stroke(); };
+  const rrect = (x0, y0, w, h, r) => { x.beginPath(); x.moveTo(x0 + r, y0); x.arcTo(x0 + w, y0, x0 + w, y0 + h, r); x.arcTo(x0 + w, y0 + h, x0, y0 + h, r); x.arcTo(x0, y0 + h, x0, y0, r); x.arcTo(x0, y0, x0 + w, y0, r); x.closePath(); };
+  const car = (cx, by, s) => {
+    const w = 170 * s, h = 70 * s;
+    x.fillStyle = C.ground2; x.beginPath(); x.ellipse(cx, by + 3 * s, w * .6, 8 * s, 0, 0, 7); x.fill();
+    x.fillStyle = C.accent; x.beginPath(); x.moveTo(cx - w * .2, by - h * .58); x.lineTo(cx - w * .1, by - h); x.lineTo(cx + w * .2, by - h); x.lineTo(cx + w * .3, by - h * .58); x.fill();
+    x.fillStyle = C.band; x.beginPath(); x.moveTo(cx - w * .14, by - h * .62); x.lineTo(cx - w * .07, by - h * .9); x.lineTo(cx + w * .17, by - h * .9); x.lineTo(cx + w * .24, by - h * .62); x.fill();
+    x.fillStyle = C.accent; rrect(cx - w / 2, by - h * .62, w, h * .44, 10 * s); x.fill();
+    x.fillStyle = C.light; x.fillRect(cx - w / 2 + 4 * s, by - h * .44, w - 8 * s, 6 * s);
+    x.fillStyle = C.accent2; x.fillRect(cx - w / 2 - 4 * s, by - h * .3, 12 * s, 7 * s); x.fillRect(cx + w / 2 - 8 * s, by - h * .3, 12 * s, 7 * s);
+    [-.3, .3].forEach(o => { x.fillStyle = C.dark; x.beginPath(); x.arc(cx + w * o, by - h * .16, 15 * s, 0, 7); x.fill(); x.fillStyle = C.light; x.beginPath(); x.arc(cx + w * o, by - h * .16, 6 * s, 0, 7); x.fill(); });
+  };
+  const sign = (cx, top, w, h, legBot, txt) => {
+    x.fillStyle = C.line; x.fillRect(cx - w * .32, top + h, 8, legBot - top - h); x.fillRect(cx + w * .32 - 8, top + h, 8, legBot - top - h);
+    x.strokeStyle = C.line; x.lineWidth = 3; for (let y = top + h + 30; y < legBot - 20; y += 46) { x.beginPath(); x.moveTo(cx + w * .32 - 8, y); x.lineTo(cx + w * .32 + 26, y + 40); x.stroke(); }
+    x.fillStyle = C.light; x.fillRect(cx - w / 2, top, w, h);
+    x.strokeStyle = C.accent; x.lineWidth = 6; x.strokeRect(cx - w / 2 + 7, top + 7, w - 14, h - 14);
+    x.fillStyle = C.accent; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '900 ' + Math.round(h * .42) + 'px "Arial Black", "Helvetica Neue", Arial, sans-serif'; x.fillText(txt, cx, top + h * .47);
+    x.fillStyle = C.dark; x.fillRect(cx - w * .3, top + h * .74, w * .6, 4);
+  };
+  const birds = (n, col) => { x.strokeStyle = col; x.lineWidth = 3; x.lineCap = 'round'; for (let i = 0; i < n; i++) { const bx = rr(W * .1, W * .9), by = rr(H * .08, hz * .6), s = rr(6, 11); x.beginPath(); x.moveTo(bx - s, by - s * .4); x.quadraticCurveTo(bx - s * .4, by - s * .7, bx, by); x.quadraticCurveTo(bx + s * .4, by - s * .7, bx + s, by - s * .4); x.stroke(); } x.lineCap = 'butt'; };
+  const dashes = (y0, y1, n, col, len) => { x.fillStyle = col; for (let i = 0; i < n; i++) { const y = rr(y0, y1), l = rr(len * .4, len); x.fillRect(rr(0, W - l), y, l, rr(3, 5)); } };
+
+  // 天空
+  x.fillStyle = C.skyTop; x.fillRect(0, 0, W, H);
+  band(hz * rr(.26, .36), C.sky2, rr(4, 10));
+  if (key !== 'sunny') band(hz * rr(.5, .6), C.band, rr(3, 7));
+  band(hz * rr(.68, .8), C.skyLow, rr(3, 8));
+  if (key !== 'sunny') for (let i = 0; i < 7; i++) streak(rr(hz * .2, hz * .85), rr(160, 420), rr(6, 14), pick([C.band, C.skyLow, C.sky2, C.cloud]));
+  if (key === 'dusk' || key === 'night') { x.fillStyle = C.sun; x.beginPath(); x.arc(rr(W * .2, W * .8), key === 'night' ? rr(H * .1, hz * .4) : hz - rr(20, 70), key === 'night' ? rr(20, 30) : rr(40, 60), 0, 7); x.fill(); }
+  if (key === 'night') { x.fillStyle = C.light; for (let i = 0; i < 40; i++) { x.beginPath(); x.arc(rr(0, W), rr(0, hz * .7), rr(1.2, 2.6), 0, 7); x.fill(); } }
+  const clouds = key === 'sunny' || (key !== 'night' && R() < .55);
+  if (clouds) {
+    for (let i = 0; i < 3; i++) cumulus(rr(W * .1, W * .9), rr(H * .12, hz * .45), rr(90, 170), rr(40, 70));
+    cumulus(rr(W * .25, W * .55), hz - rr(0, 30), W * rr(.7, 1), H * rr(.2, .3));
+    if (R() < .6) cumulus(rr(W * .7, W * 1.05), hz - rr(5, 40), W * rr(.35, .55), H * rr(.14, .22));
+  }
+
+  if (layout === 'hill') {
+    dome(rr(W * .3, W * .65), hz, H * rr(.15, .24), W * rr(.18, .3), C.far);
+    dome(rr(W * .75, W * 1.1), hz + 10, H * rr(.06, .1), W * rr(.2, .3), C.shade2);
+    x.fillStyle = C.ground; x.fillRect(0, hz, W, H - hz);
+    x.fillStyle = C.ground2; x.fillRect(0, H * .9, W, H * .1);
+    const bx = rr(W * .42, W * .62), legBot = hz + H * .06;
+    if (R() < .85) { const pts = pole(W * rr(.82, .9), H * rr(.2, .3), hz + H * .1, 1); pts.forEach(a => wire(a, [-60, a[1] + rr(-60, 80)], rr(30, 70))); }
+    if (R() < .8) sign(bx, H * rr(.2, .3), rr(300, 380), rr(90, 120), legBot, pick(['DRIVE-IN', 'MOTEL', 'CINEMA', 'DINER']));
+    for (let i = 0, n = 3 + Math.floor(R() * 3); i < n; i++) pine(W * rr(.66, .98), hz + rr(10, 40), rr(170, 300), C.dark);
+    roundTree(rr(-20, 40), hz + 30, rr(90, 130), C.dark);
+    if (R() < .75) car(W * rr(.35, .55), H * rr(.86, .89), rr(1.1, 1.35));
+    dashes(H * .91, H * .99, 30, C.light, 30);
+  } else if (layout === 'road') {
+    dome(rr(W * .2, W * .8), hz, H * rr(.02, .05), W * rr(.3, .5), C.far);
+    x.fillStyle = C.ground; x.fillRect(0, hz, W, H - hz);
+    x.fillStyle = C.ground2;
+    for (let i = 0; i < 9; i++) { const y = rr(hz + 10, H * .98), l = rr(120, 420); x.beginPath(); x.ellipse(rr(0, W), y, l, rr(6, 18), 0, 0, 7); x.fill(); }
+    const px = W * rr(.74, .88), top = H * rr(.1, .18), pts = pole(px, top, hz + H * .1, 1.1);
+    const far = pole(W * rr(.12, .22), hz - H * .14, hz + 4, .45);
+    pts.forEach((a, i) => wire(a, far[i] || far[0], rr(25, 45)));
+    pts.forEach(a => wire(a, [W + 60, a[1] + rr(-40, 60)], rr(15, 30)));
+    if (R() < .7) sign(px - rr(110, 160), hz - rr(60, 110), rr(140, 180), rr(80, 100), hz + H * .07, pick(['CAFE', 'SODA', 'OPEN', '24H']));
+    car(W * rr(.38, .55), hz + H * rr(.12, .16), rr(1.35, 1.65));
+    dashes(hz + 20, H * .98, 26, C.light, 60);
+    if (key === 'sunny' || key === 'dusk') dashes(hz + 30, H * .95, 8, C.accent2, 50);
+  } else {
+    dome(rr(W * .6, W * .9), hz, H * rr(.04, .08), W * rr(.08, .14), C.far);
+    x.fillStyle = C.sky2; x.fillRect(0, hz, W, H - hz);
+    dashes(hz + 4, H * .8, 16, C.band, 220);
+    dashes(hz + 20, H * .9, 12, C.shade2, 180);
+    dashes(hz + 4, hz + 60, 12, C.light, 40);
+    dashes(hz + 60, H * .75, 10, C.light, 70);
+    x.fillStyle = C.dark; x.beginPath(); x.moveTo(0, H * rr(.74, .82)); x.quadraticCurveTo(W * .35, H * rr(.8, .86), W * rr(.55, .7), H); x.lineTo(0, H); x.fill();
+    for (let i = 0, n = 2 + Math.floor(R() * 3); i < n; i++) pine(rr(20, W * .3), H * rr(.82, .9), rr(180, 300), C.dark);
+    const pts = pole(W * rr(.3, .42), H * rr(.25, .35), H * .9, 1);
+    pts.forEach(a => wire(a, [W + 60, a[1] + rr(40, 140)], rr(30, 60)));
+    pts.forEach(a => wire(a, [-60, a[1] + rr(-30, 40)], rr(15, 30)));
+  }
+  birds(3 + Math.floor(R() * 4), key === 'sunny' ? C.light : C.line);
+  return cv;
 }
 
 /* ================= 换色引擎 ================= */
@@ -1027,7 +1170,7 @@ function mergeSmall(lab, W, H, minArea) {
 /* ================= 换色状态 ================= */
 const Swap = {
   work: null, kind: 'art', demo: true, n: 10, detail: 1, onlyHave: true, view: 'pens',
-  res: null, map: [], ov: [], extra: [], itemId: null, share: null, pick: null, cache: {},
+  res: null, map: [], ov: [], extra: [], itemId: null, share: null, pick: null, cache: {}, style: '', styleSet: null, mood: 'sunny', step: 0,
   rematch() { if (this.res) { this.match(); render(); renderSwapList(); } }
 };
 function procMax() { return 640; }
@@ -1038,8 +1181,10 @@ async function setWork(cv, opts) {
   if (opts.kind) setKind(opts.kind, true);
   if (opts.n) { Swap.n = opts.n; $('#nIn').value = opts.n; $('#nOut').value = opts.n; }
   if (opts.detail != null) { Swap.detail = opts.detail; $('#detIn').value = opts.detail; $('#detOut').value = opts.detail; }
+  if (opts.style != null) setStyle(opts.style, true);
+  if (Swap.view === 'step') Swap.view = 'pens';
   $('#srcTitle').textContent = opts.title || (Swap.kind === 'photo' ? '我的照片' : '参考图');
-  $('#srcKind').textContent = opts.demo ? '示例图' : (Swap.kind === 'photo' ? '照片 → 画稿' : '参考图');
+  $('#srcKind').textContent = Swap.kind === 'gen' ? '随机生成' : (Swap.kind === 'photo' ? '照片 → 画稿' : '参考图');
   $('#pickOut').hidden = true; $('#pin').hidden = true; $('#planOut').hidden = true;
   const it = Swap.itemId && Store.items.get(Swap.itemId);
   $('#itemLink').hidden = !it;
@@ -1053,15 +1198,32 @@ function setKind(k, silent) {
   $$('[data-kind]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === k)));
   $('#dropTitle').textContent = k === 'photo' ? '选一张你拍的照片' : '选一张图，或拖进来';
   $('#dropSub').textContent = k === 'photo' ? '风景、宠物、食物都行。会简化成色块，再配上你的笔，生成一张数字油画式的画稿' : '小红书里长按保存图片 / 截图都行，电脑上可以直接粘贴';
-  $('#shareField').hidden = k === 'photo';
+  $('#shareField').hidden = k !== 'art';
+  $('#drop').hidden = k === 'gen'; $('#genBox').hidden = k !== 'gen';
+  if (!silent && k === 'gen') { makeGen(); return; }
   if (!silent) {
     const det = k === 'photo' ? 2 : 1, n = k === 'photo' ? 12 : 10;
     Swap.detail = det; $('#detIn').value = det; $('#detOut').value = det;
     Swap.n = n; $('#nIn').value = n; $('#nOut').value = n;
     if (k === 'photo' && Swap.view === 'orig') setView('sketch');
-    if (Swap.work && !Swap.demo) runAnalyze();
+    if (Swap.work && !Swap.demo && Swap.kind !== 'gen') runAnalyze();
   }
 }
+function setStyle(st, silent) {
+  Swap.style = st || '';
+  Swap.styleSet = st && MOODS[st] ? moodPens(st).nos : null;
+  $$('#styleP [data-style]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.style === Swap.style)));
+  $('#styleHint').textContent = Swap.style ? MOODS[Swap.style].name + '：只用这 ' + Swap.styleSet.size + ' 支笔（' + Array.from(Swap.styleSet).join('、') + '）。' : '原色：在全部笔里找最接近的。选一个风格，就只用那一组笔，照片会变成平涂插画的感觉。';
+  if (!silent) { Swap.styleUser = true; Swap.cache = {marks: Swap.cache.marks}; Swap.rematch(); }
+}
+$$('#styleP [data-style]').forEach(b => b.addEventListener('click', () => setStyle(b.dataset.style)));
+function makeGen(demo) {
+  const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0;
+  Swap.styleUser = false;
+  return setWork(genScene(Swap.mood, seed), {kind: 'gen', demo: !!demo, title: '随机 · ' + MOODS[Swap.mood].name, n: 16, detail: 0, style: Swap.mood});
+}
+$$('#moodP [data-mood]').forEach(b => b.addEventListener('click', () => { Swap.mood = b.dataset.mood; $$('#moodP [data-mood]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); makeGen(); }));
+$('#genGo').addEventListener('click', () => makeGen());
 let anaTok = 0;
 async function runAnalyze() {
   if (!Swap.work) return;
@@ -1116,6 +1278,19 @@ function render() {
   cv.width = W; cv.height = H;
   const x = cv.getContext('2d'), im = x.createImageData(W, H), d = im.data, lab = r.labels;
   const col = Swap.map.map((m, i) => { const p = penForLabel(i); return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
+  if (view === 'step') {
+    const steps = Swap.cache.steps || [], vis = new Set();
+    steps.slice(0, Swap.step + 1).forEach(st => st.nos.forEach(n => vis.add(n)));
+    for (let i = 0; i < W * H; i++) {
+      const v = lab[i], m = Swap.map[v], on = m && m.no && vis.has(m.no);
+      let c = on ? col[v] : [251, 250, 246];
+      if (!on) { const xx = i % W; if ((xx < W - 1 && lab[i + 1] !== v) || (i + W < W * H && lab[i + W] !== v)) c = [196, 197, 205]; }
+      d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255;
+    }
+    x.putImageData(im, 0, 0);
+    fitCanvas();
+    return;
+  }
   if (view === 'pens') {
     for (let i = 0; i < W * H; i++) { const c = col[lab[i]]; d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255; }
     x.putImageData(im, 0, 0);
@@ -1174,6 +1349,7 @@ function regionMarks(lab, W, H) {
 /* ================= 换色：右侧清单 ================= */
 let openAlt = null;
 function renderSwapList() {
+  renderSteps();
   const gs = groups(), ul = $('#plist');
   $('#penCount').innerHTML = flap(gs.length);
   if (!Store.pens.length) { ul.innerHTML = '<li class="hint">色卡里还没有笔，先去「我的笔」加。</li>'; return; }
@@ -1192,6 +1368,58 @@ function renderSwapList() {
       '<button class="more" type="button" data-more="' + esc(g.no) + '" aria-expanded="' + (openAlt === g.no) + '">换</button>' + alt + '</li>';
   }).join('');
 }
+function procSteps() {
+  const info = groups().filter(g => !g.extra && g.share > 0).map(g => { const p = penByNo(g.no); return {g, p, L: p ? hexLab(p.hex)[0] : 50}; }).filter(o => o.p);
+  const S = [
+    {t: '铺大色块', d: '先把面积最大的几块铺满，浅的先上。笔头压平、往一个方向涂，干透再画下一层。', f: o => o.g.share >= .1, sort: (a, b) => b.L - a.L},
+    {t: '中间色', d: '再画中等大小的色块，边缘稍微压住底色，接缝就不会露白。', f: o => o.g.share >= .025 && o.L >= 32},
+    {t: '暗部和剪影', d: '用深色压暗部、画剪影和线条，画面一下就立起来了。', f: o => o.L < 32},
+    {t: '小块颜色', d: '换细头补小面积的颜色和细节。', f: o => o.L < 86},
+    {t: '高光和提亮', d: '最后用浅色、白色点高光、勾亮边。一定等下面干透。', f: () => true}
+  ];
+  const used = new Set(), out = [];
+  S.forEach(st => {
+    const list = info.filter(o => !used.has(o.g.no) && st.f(o));
+    if (!list.length) return;
+    list.sort(st.sort || ((a, b) => b.g.share - a.g.share));
+    list.forEach(o => used.add(o.g.no));
+    out.push({t: st.t, d: st.d, nos: list.map(o => o.g.no)});
+  });
+  return out;
+}
+function renderSteps() {
+  const box = $('#procOut'), r = Swap.res;
+  if (!r) { box.hidden = true; return; }
+  const steps = Swap.cache.steps = procSteps();
+  box.hidden = !steps.length;
+  const ol = $('#procSteps');
+  ol.innerHTML = steps.map((st, k) => '<li><button type="button" class="pstep" data-step="' + k + '" aria-pressed="' + (Swap.view === 'step' && Swap.step === k) + '"><canvas width="10" height="10"></canvas><span class="n">第 ' + (k + 1) + ' 步</span><b>' + esc(st.t) + '</b><span class="penstrip">' + st.nos.map(n => penHTML(penByNo(n), 'mini')).join('') + '</span><p>' + esc(st.d) + '</p></button></li>').join('');
+  const W = r.W, H = r.H, tw = 220, th = Math.round(tw * H / W), sc = Math.max(1, Math.floor(W / tw));
+  const lab = r.labels, col = Swap.map.map(m => { const p = m.no ? penByNo(m.no) : null; return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
+  const vis = new Set();
+  steps.forEach((st, k) => {
+    st.nos.forEach(n => vis.add(n));
+    const cv = ol.querySelectorAll('canvas')[k]; cv.width = Math.ceil(W / sc); cv.height = Math.ceil(H / sc);
+    const x = cv.getContext('2d'), im = x.createImageData(cv.width, cv.height), d = im.data;
+    for (let y = 0; y < cv.height; y++) for (let xx = 0; xx < cv.width; xx++) {
+      const v = lab[Math.min(H - 1, y * sc) * W + Math.min(W - 1, xx * sc)], m = Swap.map[v];
+      const c = m && m.no && vis.has(m.no) ? col[v] : [251, 250, 246], o = (y * cv.width + xx) * 4;
+      d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+    }
+    x.putImageData(im, 0, 0);
+  });
+}
+$('#procSteps').addEventListener('click', e => {
+  const b = e.target.closest('[data-step]'); if (!b) return;
+  const k = +b.dataset.step;
+  if (Swap.view === 'step' && Swap.step === k) { setView('pens'); return; }
+  Swap.view = 'step'; Swap.step = k;
+  $$('[data-view]').forEach(x => x.setAttribute('aria-pressed', 'false'));
+  $$('#procSteps [data-step]').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.step === k)));
+  $('#viewHint').textContent = '画完第 ' + (k + 1) + ' 步是这样（再点一下回到全图）';
+  render();
+  $('#cvWrap').scrollIntoView({block: 'nearest', behavior: 'smooth'});
+});
 function flap(n) { return String(n).split('').map(c => '<b>' + c + '</b>').join(''); }
 $('#plist').addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
@@ -1240,6 +1468,7 @@ function setView(v) {
   Swap.view = v;
   $$('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
   $('#viewHint').textContent = v === 'sketch' ? '每一块写着该用的色号，可以照着打底稿' : '点图上任意一处，看最接近的是哪支笔';
+  $$('#procSteps [data-step]').forEach(x => x.setAttribute('aria-pressed', 'false'));
   render();
 }
 $$('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
@@ -1255,7 +1484,7 @@ async function takeFile(file) {
   try {
     const cv = await fileToCanvas(file, 1400);
     const sh = Swap.kind === 'art' ? parseShare($('#shareIn').value) : null;
-    await setWork(cv, {kind: Swap.kind, title: sh && sh.title ? sh.title : (Swap.kind === 'photo' ? '我的照片' : (file.name || '参考图').replace(/\.[^.]+$/, '')), share: sh});
+    await setWork(cv, {kind: Swap.kind, style: Swap.kind === 'photo' && Swap.styleUser ? Swap.style : '', title: sh && sh.title ? sh.title : (Swap.kind === 'photo' ? '我的照片' : (file.name || '参考图').replace(/\.[^.]+$/, '')), share: sh});
     showTab('swap');
   } catch (e) { toast('这张图打不开，换 JPG 或 PNG 试试。'); }
 }
@@ -1310,9 +1539,10 @@ $('#aiPlan').addEventListener('click', async () => {
   $('#planStop').onclick = () => planAbort && planAbort.abort();
   const avail = Store.pens.filter(p => p.st !== 'out').map(p => p.no + ' ' + (p.name || '') + ' ' + p.hex).join('\n');
   const used = swapPens().map(p => { const pen = penByNo(p.no); return p.no + ' ' + (pen ? pen.name : '') + ' 占' + Math.round(p.share * 100) + '% 原图颜色' + p.src; }).join('\n');
+  const auto = (Swap.cache.steps || []).map((st, k) => (k + 1) + '. ' + st.t + '：' + st.nos.join(' ')).join('\n');
   const what = Swap.kind === 'photo' ? '一张我自己拍的照片，我想把它画成一幅丙烯马克笔画（平涂色块风格，适合新手到中级）' : '别人画的一幅丙烯马克笔画，我想用我自己的笔临摹';
   const prompt = '你是丙烯马克笔绘画老师，回答用简体中文。图片是' + what + '。\n\n我手上有的笔（色号 名字 色值）：\n' + avail + '\n\n程序从图里提取了主要颜色，已经对应到我的笔：\n' + used +
-    '\n\n请按丙烯马克笔的真实画法排临摹步骤：先浅后深、先大面积后细节、底色干透再叠色、亮部高光最后用浅色或白色点。每一步只用上面「我手上有的笔」里的色号，优先用程序已经对应好的。\n' +
+    '\n\n程序按面积和明暗粗排的上色顺序（可以调整、拆细）：\n' + auto + '\n\n请像小红书「附过程」的帖子那样，按丙烯马克笔的真实画法排临摹步骤：先浅后深、先大面积后细节、底色干透再叠色、亮部高光最后用浅色或白色点。每一步只用上面「我手上有的笔」里的色号，优先用程序已经对应好的。\n' +
     '只返回 JSON：{"look":"一句话说这幅画的配色和画面特点","steps":[{"title":"不超过8个字","pens":["色号"],"how":"一两句具体怎么画，提到区域和笔法"}],"tips":["最多3条注意事项"]}。steps 4 到 7 步。';
   try {
     const blob = await toBlob(toCanvas(Swap.work, 1100), .85);
@@ -1356,6 +1586,7 @@ function cardPens(it, max) {
   return '<div class="penstrip">' + show.map(itemPenHTML).join('') + (ps.length > max ? '<span class="tag">+' + (ps.length - max) + '</span>' : '') + '</div>';
 }
 function renderWant() {
+  if (typeof SEEDS !== 'undefined') renderSeeds();
   const all = Array.from(Store.items.values()).filter(i => i.kind === 'want');
   $('#wantBadge').hidden = !all.length; $('#wantBadge').textContent = all.length;
   const tags = new Map(); all.forEach(i => (i.tags || []).forEach(t => tags.set(t, (tags.get(t) || 0) + 1)));
@@ -1381,7 +1612,7 @@ function renderWant() {
   g.innerHTML = list.map(it => {
     const miss = missing(it);
     return '<button class="icard paper" type="button" data-open="' + it.id + '"><span class="ph">' + (it.thumb ? '<img src="' + it.thumb + '" alt="" loading="lazy">' : '<span class="noimg">没有图</span>') + '</span>' +
-      '<h4>' + esc(it.title || '未命名') + '</h4><span class="meta">' + hearts(it.love) + (it.src === 'photo' ? '<span class="tag">我的照片</span>' : '') + (it.author ? '<span>' + esc(it.author) + '</span>' : '') + (it.tags || []).slice(0, 3).map(t => '<span class="tag">' + esc(t) + '</span>').join('') + '</span>' +
+      '<h4>' + esc(it.title || '未命名') + '</h4><span class="meta">' + hearts(it.love) + (it.src === 'photo' ? '<span class="tag">我的照片</span>' : it.src === 'gen' ? '<span class="tag">随机生成</span>' : '') + (it.author ? '<span>' + esc(it.author) + '</span>' : '') + (it.tags || []).slice(0, 3).map(t => '<span class="tag">' + esc(t) + '</span>').join('') + '</span>' +
       cardPens(it, 8) + (miss.length ? '<span class="warnline">缺 ' + miss.length + ' 支笔</span>' : '') + '</button>';
   }).join('');
 }
@@ -1507,15 +1738,15 @@ async function openInSwap(it) {
   try {
     const img = await loadImg(data);
     showTab('swap');
-    await setWork(img, {itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', title: it.title, n: it.n, detail: it.detail, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
+    await setWork(img, {itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', style: it.style || '', title: it.title, n: it.n, detail: it.detail, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
     if (it.plan) renderPlan(it.plan);
   } catch (e) { toast('图打不开了。'); }
 }
 function fromSwap(kind) {
   const it0 = Swap.itemId && Store.items.get(Swap.itemId);
   const sh = Swap.share || {};
-  const x = it0 ? plain(it0) : {id: newId(), kind, created: Date.now(), title: sh.title || (Swap.demo ? '示例 · 溪涧黄昏' : (Swap.kind === 'photo' ? '我的照片' : '')), author: sh.author || '', link: sh.url || '', tags: (sh.tags || []).slice(), love: 0};
-  x.pens = swapPens(); x.n = Swap.n; x.detail = Swap.detail; x.ov = Swap.ov; x.extra = Swap.extra; x.src = Swap.kind;
+  const x = it0 ? plain(it0) : {id: newId(), kind, created: Date.now(), title: sh.title || $('#srcTitle').textContent || '', author: sh.author || '', link: sh.url || '', tags: (sh.tags || []).slice(), love: 0};
+  x.pens = swapPens(); x.n = Swap.n; x.detail = Swap.detail; x.ov = Swap.ov; x.extra = Swap.extra; x.src = Swap.kind; x.style = Swap.style;
   if (Swap.plan && !x.plan) x.plan = Swap.plan;
   return x;
 }
@@ -1760,7 +1991,7 @@ function quickPens(cv) {
   const r = analyze(toCanvas(cv, 420), 10, 1), g = new Map();
   r.centers.forEach(c => {
     if (c.share < .004) return;
-    const best = rankPens(c.lab, true, 1)[0]; if (!best) return;
+    const best = rankPens(c.lab, true, 1, true)[0]; if (!best) return;
     const e = g.get(best.p.no) || {no: best.p.no, share: 0, src: c.hex, top: 0};
     e.share += c.share; if (c.share > e.top) { e.top = c.share; e.src = c.hex; }
     g.set(best.p.no, e);
@@ -1800,6 +2031,37 @@ function linkShare(e) {
 }
 $('#iLink').addEventListener('input', linkShare);
 $('#iLink').addEventListener('change', linkShare);
+/* 你发给我的 4 张（图片是这个页面自带的文件，加进想画后存到你自己的记录里） */
+const SEEDS = [
+  {f: 'seed/1.jpg', share: '【丙烯马克笔｜旅行⛰（附过程色号） - 见山 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/69a26246000000001a02db5c?source=webshare&xhsshare=pc_web&xsec_token=ABmW8qP-sKuupqHXeGOoB3EkLFDIIrBsh8gb48EvVoYwU=&xsec_source=pc_share', tags: ['风景', '蓝调']},
+  {f: 'seed/2.jpg', share: '【丙烯马克笔翻翻乐47｜云朵加油站（附过程） - 半枝桃 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/6aca45c7000000001802e21b?source=webshare&xhsshare=pc_web&xsec_token=AB_1GPI_pbPqs-EvP0ZriOPSwrr-Qr3nEO8Jxg3UwyzgI=&xsec_source=pc_share', tags: ['天空', '晴空']},
+  {f: 'seed/3.jpg', share: '【丙烯马克笔｜蓝调时刻 - 邪恶卤肉饭 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/6a7e5f6d00000000080138c5?source=webshare&xhsshare=pc_web&xsec_token=AB7wvehS_VIi-lYHORHbO2PD1--hJqqxftimzGPw0XdNI=&xsec_source=pc_share', tags: ['人物', '蓝调']},
+  {f: 'seed/4.jpg', share: '【属于夏天的|直液式丙烯马克笔|过程新手友好 - 翠西要搞艺术 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/6874a50b0000000011003411?source=webshare&xhsshare=pc_web&xsec_token=AB8a8IfQWsGW0FvrUojsgXp4vHQvieBuqJT5qhAQ97nF4=&xsec_source=pc_share', tags: ['静物', '蓝调']}
+].map(o => Object.assign(o, parseShare(o.share)));
+function seedLeft() { const links = new Set(Array.from(Store.items.values()).map(i => i.link)); return SEEDS.filter(o => !links.has(o.url)); }
+function renderSeeds() {
+  const left = seedLeft(), card = $('#seedCard');
+  card.hidden = !left.length || lsGet('suilei.seedOff') === 'off';
+  if (card.hidden) return;
+  if (!$('#seedThumbs').childElementCount) $('#seedThumbs').innerHTML = SEEDS.map(o => '<figure><img src="' + o.f + '" alt="" loading="lazy"><figcaption>' + esc(o.author) + '</figcaption></figure>').join('');
+}
+$('#seedOff').addEventListener('click', () => { lsSet('suilei.seedOff', 'off'); $('#seedCard').hidden = true; });
+$('#seedAdd').addEventListener('click', async () => {
+  const btn = $('#seedAdd'), left = seedLeft(); btn.disabled = true;
+  let ok = 0;
+  for (let i = 0; i < left.length; i++) {
+    const o = left[i]; $('#seedMsg').textContent = '正在加 ' + (i + 1) + ' / ' + left.length + '…';
+    try {
+      const res = await fetch(o.f); if (!res.ok) throw new Error('fetch');
+      const cv = await fileToCanvas(await res.blob(), 1400);
+      const it = {id: newId(), kind: 'want', created: Date.now() + i, title: o.title, author: o.author, link: o.url, tags: o.tags.concat(o.tags.length ? [] : []), love: 2, pens: quickPens(cv), n: 12, detail: 1, ov: [], extra: [], src: 'art', thumb: jpeg(cv, 300, 30000), hasRef: true};
+      saveItem(it); putImg(it.id + '_ref', jpeg(cv, 1200, 230000)).catch(() => {}); ok++;
+    } catch (e) {}
+  }
+  btn.disabled = false; $('#seedMsg').textContent = '';
+  toast(ok ? '加好了 ' + ok + ' 张。点卡片看配色和上色过程。' : '没加上，刷新页面再试一次。');
+});
+
 /* 有自己存的图时，换色页不再放示例图 */
 function openOwnIfDemo() {
   if (!Swap.demo) return;
@@ -1817,6 +2079,6 @@ function openOwnIfDemo() {
   const tab = ['swap', 'want', 'done', 'pens'].includes(h) ? h : (['swap', 'want', 'done', 'pens'].includes(saved) ? saved : 'swap');
   showTab(tab);
   if (Array.from(Store.items.values()).some(i => i.kind === 'want' && (i.thumb || i.hasRef))) openOwnIfDemo();
-  else setWork(demoPainting(), {demo: true, title: '示例 · 溪涧黄昏', kind: 'art'});
+  else { Swap.mood = Math.random() < .5 ? 'sunny' : 'blue'; $$('#moodP [data-mood]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.mood === Swap.mood))); makeGen(true); }
 })();
 </script>

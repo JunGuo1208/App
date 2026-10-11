@@ -384,7 +384,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
         <path class="st3" d="M7 34c6-1.5 13-1.6 19-1" stroke="#2AA3D6" stroke-width="5.5" stroke-linecap="round" fill="none"/>
         <g class="mk"><g transform="rotate(40 34 20)"><rect x="29.5" y="-2" width="9" height="20" rx="2.2" fill="#24252C" stroke="var(--cut)" stroke-width="1.6"/><rect x="29.5" y="12" width="9" height="12" rx="1.6" fill="#2AA3D6" stroke="var(--cut)" stroke-width="1.6"/><path d="M31.8 24h4.4l-1 4.6h-2.4z" fill="#2AA3D6" stroke="var(--cut)" stroke-width="1.2" stroke-linejoin="round"/><rect x="31" y="2" width="6" height="5" rx=".8" fill="#FFFFFF"/></g></g>
       </svg></div>
-      <div><h1><span class="washi">随类换色台</span></h1><p>丙烯马克笔 · 我的色卡</p></div>
+      <div><h1><span class="washi">随类换色台</span></h1><p>丙烯马克笔 · MKB2309-120</p></div>
     </div>
     <nav class="nav" role="tablist" aria-label="工作区">
       <button role="tab" type="button" id="t-swap" data-tab="swap" aria-controls="p-swap" aria-selected="true">
@@ -531,6 +531,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
       </div>
       <span class="hint">点一支笔可以改颜色、名字，标记快没水 / 没了</span>
     </div>
+    <p class="hint" style="margin:-4px 0 14px">色号和名字照官方色卡录入，颜色是从色卡图片上取的，和实际涂在纸上可能差一点。觉得哪支不准，点它改颜色；想全部更准，可以涂一张手绘色卡拍照导入。</p>
     <div class="pengrid" id="penGrid"></div>
     <div class="shop paper" id="shop" hidden></div>
   </section>
@@ -726,29 +727,39 @@ function quality(d) {
 }
 function hueKey(h) { const l = hexLab(h), C = Math.hypot(l[1], l[2]); if (C < 9) return [0, -l[0]]; let a = Math.atan2(l[2], l[1]) * 180 / Math.PI; a = (a + 360 - 15) % 360; return [1, a * 1000 - l[0]]; }
 
-/* ================= 示例色卡（不是用户的笔） ================= */
-const DEMO_PENS = ['白#F7F6F2','暖灰1#D9D4CC','暖灰3#ADA59A','冷灰1#D3D7DB','冷灰3#A1A8B0','冷灰5#6E7680','深灰#45484D','黑#1C1C1E',
-'奶油黄#FFF2B3','浅柠檬黄#FFF27A','柠檬黄#FFE81A','中黄#FFD21F','土黄#E0A82E','橘黄#FFB21F','芥末黄#C9A640','香蕉黄#F7E08A','金黄#F2B705','杏黄#FBD38D',
-'浅橙#FFC48C','橙#FF8A1F','深橙#F26419','橘红#F04E23','珊瑚橙#FF7F5C','杏色#FBC9A6','南瓜橙#E3752B','赭橙#C8692B',
-'朱红#E63A2E','大红#D7262E','正红#C8102E','深红#9E1B32','酒红#7A1F2B','玫红#E0245E','西瓜红#F25C69','番茄红#EE4B3C','砖红#B5442E','胭脂#A8324B',
-'浅粉#FBD3DC','樱花粉#F7B6C8','粉红#F48FB1','桃粉#FF9AA2','蔷薇粉#E8738E','豆沙粉#D49A9A','藕粉#E3B7C1','玫瑰粉#E25D8C','荧光粉#FF4FA3','肉粉#F6C1A9',
-'浅紫#D9C7EC','薰衣草#B9A3DB','丁香紫#C79BD6','紫罗兰#8E5FB5','中紫#6F3FA0','深紫#4B2A7B','葡萄紫#5E2750','紫红#9B2F7A','灰紫#8C7FA3','雾紫#B6AFC9',
-'冰蓝#DDF0FA','浅天蓝#B5DDF2','天蓝#6CC0E8','湖蓝#2AA3D6','孔雀蓝#0A7EA4','钴蓝#1F5FBF','群青#2B3A9B','普蓝#1E2F66','深蓝#17204D','雾霾蓝#8EA6BF','灰蓝#5F7C95','牛仔蓝#3E6A9E','宝蓝#1C4FD8','淡蓝紫#9FB0E6','海军蓝#22305C','蔚蓝#3D8FD9',
-'薄荷蓝#A8E6E0','青#19B5B0','蓝绿#0E8C8C','碧绿#1F9E89','湖绿#5EC4B6','深青#0B5E63',
-'嫩黄绿#E2F0A0','浅草绿#C1E07A','黄绿#9CCB3B','草绿#6DB33F','中绿#2E9A47','翠绿#13A35B','深绿#1F6B3A','墨绿#173F2C','橄榄绿#7A8C35','苔绿#5C6E2E','抹茶绿#A5B866','薄荷绿#B3E5C6','豆绿#92C5A0','灰绿#8FA394','松绿#2F6E5B','军绿#4E5B31','森林绿#24543A','荧光绿#8BE33B',
-'米色#EDE0C8','卡其#CDB48A','浅棕#C49A6C','驼色#A97C50','赭石#A35A2A','熟褐#6E3F1F','生褐#7D5A3C','咖啡#5A3A28','深棕#3E2A1F','焦茶#2E2019',
-'浅肤#FBE3D2','肤色#F5CDB0','暖肤#E9AF8B','深肤#C98A62',
-'荧光黄#F4FF3B','荧光橙#FF7A1A','荧光蓝#3FD0FF','荧光紫#B04DFF','金色#C9A34E','银色#B8BCC2','古铜#9A6B3C','夜蓝#10183A','雾白#ECEEF0','珍珠白#F3EEE6'
-].map((s, i) => { const k = s.indexOf('#'); return {no: String(i + 1), name: s.slice(0, k), hex: s.slice(k), st: 'ok'}; });
+/* ================= 我的笔：MKB2309-120（色号、名字照官方色卡；颜色从色卡图片上取） ================= */
+const SET_NAME = 'MKB2309-120';
+const BASE_PENS = [
+'Y416 中黄#FED15C','F786 橘红#F49B01','F06 荧光红#E95251','R755 品红#B7163F','R128 可可棕#A2526B','G772 深绿#054233',
+'Y128 亮黄#FFE701','Y906 橙色#F28C38','F07 红橙#F0836F','R269 深红#D60C1A','R698 枣红#BE5A72','G154 森林绿#519B46',
+'Y276 铬黄色#FEEB60','F04 荧光橙#F1844B','R238 檀木#F0858D','R692 波尔多粉#D12942','R758 荧光粉#E95098','G277 铬绿色#37B15C',
+'Y788 浅黄#FFE97C','F702 蜜柚橙#F6AC6D','R787 薄红#F29A98','R754 艳红#E4003B','R151 黑莓紫#E784B3','G275 灰绿#71A67A',
+'F01 柠檬黄#FEF363','Y209 陶艺#EBAB7F','R765 杏色#EEC1AC','R109 红色#E9334C','R218 玫瑰紫#E499C2','G519 翡翠绿#6ABB6E',
+'Y771 荧光黄#F2EF7E','Y713 琥珀色#F7B88C','R201 暖灰#EDD2C9','R691 珊瑚粉#F6BBBD','R759 红润色#F19BB4','G687 明绿#69B030',
+'Y791 日光黄#FFEFA2','Y792 暖黄色#FDD8A1','Y145 肉桂橙#F7C4A9','R150 豆沙粉#F7C5BE','R605 粉红#F3B3CE','G770 草绿#95C764',
+'Y146 甜柠檬#FEF8BA','Y210 中古黄#FFE8BE','R766 奶茶棕#F5CDC1','R704 淡粉#F7CECA','R705 淡紫#E9C6DE','G281 荧光绿#ACCC07',
+'R761 自然色#FCECDF','R790 芦黄#FEEACF','R701 肤色#FCE0B8','R144 西柚粉#F9DAE2','R783 柔光紫#EEC3DE','G776 抹茶#E4E98D',
+'R211 海慕斯#FFF3E7','R789 自然粉#FEF0D5','R784 浅粉色#FEEFE8','F703 象牙橙#FAE3EB','R760 灰梅#F0D6D7','G279 浅春绿#ECF2C6',
+'G697 松绿#024824','B688 藏青色#002750','B207 爱琴海蓝#02437B','BR756 树莓紫#6A2750','BR762 黑巧棕#3F2B22','S 黑色#221914',
+'G152 松霜绿#009E6E','B780 普蓝#023263','B779 景蓝#014A97','R835 葡萄紫#691585','Y762 咖啡#914D40','NG271 神秘灰#798384',
+'G777 碧绿#009F8D','B118 墨蓝#135E95','B028 宝蓝#006DBA','R848 丁香紫#664596','BR764 焦糖棕#9C5F4D','NG767 浅灰#BCD2DF',
+'G695 墨绿#089C9E','B119 天空蓝#007AC3','B215 炫目蓝#0092BB','R158 紫色#B797C0','R260 大地红#CC988D','NG212 海岩#CAD3D8',
+'G227 绿色#00A4A5','G694 军绿#4C8397','B117 湖蓝#50C0EE','R714 薰衣草#C2A4C8','Y206 中灰#BB9F9C','NG272 石灰#E2EAEC',
+'G775 蓝绿#61C0AA','B690 秋波蓝#8FBED2','B782 淡蓝#81BFE6','R785 樱花紫#DFA3C5','BR763 灰岩棕#8C766B','NG768 灰白#EBF1F1',
+'B815 湖绿#85C9BC','B153 雾霾蓝#83BFD9','B278 柔和蓝#85B0DB','R757 紫粉#E4ADCA','Y208 土棕色#A68566','NG769 雾灰#D2D2D2',
+'G147 薄荷绿#BBE1D6','B778 烟雨蓝#99CBD4','B689 瓷蓝色#85BCE3','R149 芋泥紫#C6C7E5','G202 春芜#A7B578','NG270 青城灰#DADBD5',
+'B708 龙泉青#D3EAE2','B793 清水蓝#B6DFE5','G773 梦幻蓝#9ED6E3','NG693 蓝灰#7E8BAB','R707 木兰彩#D0D6B4','W706 白青#E2E6E5',
+'NG274 风铃灰#BBD2CC','B781 冰雪蓝#C2E4EE','B148 牛奶蓝#BBE2F1','G699 黛绿#617492','G774 牛油果#EEF6E1','W01 白色#FEFEFE'
+].map(s => { const k = s.indexOf('#'), sp = s.indexOf(' '); return {no: s.slice(0, sp), name: s.slice(sp + 1, k), hex: s.slice(k), st: 'ok'}; });
 
 /* ================= 数据 ================= */
 const LS = {pal: 'suilei.pal', items: 'suilei.items', img: 'suilei.img.', tab: 'suilei.tab', banner: 'suilei.banner'};
-const Store = {pens: DEMO_PENS.map(p => Object.assign({}, p)), demo: true, items: new Map(), mode: 'local'};
+const Store = {pens: BASE_PENS.map(p => Object.assign({}, p)), demo: false, items: new Map(), mode: 'local'};
 const memImg = new Map();
 let cloud = null;
 (function loadLocal() {
   const p = lsGet(LS.pal);
-  if (p && Array.isArray(p.pens) && p.pens.length) { Store.pens = p.pens; Store.demo = !!p.demo; }
+  if (p && Array.isArray(p.pens) && p.pens.length && !p.demo) { Store.pens = p.pens; Store.demo = false; }
   const it = lsGet(LS.items);
   if (Array.isArray(it)) it.forEach(o => { if (o && o.id) Store.items.set(o.id, o); });
 })();
@@ -838,7 +849,7 @@ async function initCloud() {
         return;
       }
     }
-    if (v && Array.isArray(v.pens) && v.pens.length) { Store.pens = v.pens; Store.demo = !!v.demo; penLabsDirty = true; }
+    if (v && Array.isArray(v.pens) && v.pens.length && !v.demo) { Store.pens = v.pens; Store.demo = false; penLabsDirty = true; }
     lsDel(LS.pal); changed(); Swap.rematch();
   }, fallBack);
   c.items.onSnapshot(snap => {
@@ -1534,7 +1545,7 @@ function renderPens() {
   else if (psort === 'hue') list.sort((a, b) => { const x = hueKey(a.hex), y = hueKey(b.hex); return x[0] - y[0] || x[1] - y[1]; });
   else list.sort((a, b) => (use.get(b.no) || 0) - (use.get(a.no) || 0) || natCmp(a.no, b.no));
   const low = Store.pens.filter(p => p.st === 'low'), out = Store.pens.filter(p => p.st === 'out');
-  $('#penTitle').textContent = Store.demo ? '示例色卡' : '我的笔';
+  $('#penTitle').textContent = '我的笔 · ' + SET_NAME;
   $('#penSum').textContent = '共 ' + Store.pens.length + ' 支' + (low.length ? ' · 快没水 ' + low.length : '') + (out.length ? ' · 没了 ' + out.length : '');
   $('#penGrid').innerHTML = list.length ? list.map(p => '<button type="button" class="pen' + (p.st === 'out' ? ' out' : '') + (p.st === 'low' ? ' low' : '') + '" data-pen="' + esc(p.no) + '"><i class="sw" style="--c:' + p.hex + '"></i><b>' + esc(p.no) + '</b><small>' + esc(p.name || '') + (psort === 'use' && use.get(p.no) ? ' · ' + use.get(p.no) + '次' : '') + '</small></button>').join('') : '<p class="hint">色卡是空的。拍色卡导入，或者点「加一支」。</p>';
   const shop = $('#shop');

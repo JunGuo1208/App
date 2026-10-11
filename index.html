@@ -280,6 +280,23 @@ input[type=color]{width:44px;height:40px;border:0;padding:0;background:none;curs
 .toppens .penstrip .pen{position:relative}
 .toppens .penstrip i{position:absolute;right:-6px;top:-7px;font-style:normal;font-size:10px;font-family:var(--f-type);font-weight:700;background:var(--shu);color:#fff;border-radius:3px;padding:0 4px;line-height:15px;box-shadow:0 0 0 1.5px var(--cut)}
 
+/* 首页收集卡 */
+.collect{display:flex;flex-direction:column;gap:14px}
+.col-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 20px;align-items:center}
+.col-head p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.col-body{display:flex;flex-direction:column;gap:12px}
+.collect .go{flex-direction:row;align-items:center;gap:8px}
+@media (max-width:760px){.col-head{grid-template-columns:1fr}.collect .go{justify-content:flex-start}}
+/* 这一张的信息条 */
+.itembar{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px;color:var(--ink-2)}
+.itembar .by{color:var(--ink-2)}
+.itembar .hearts{color:var(--shu)}
+/* 复原度 */
+.pens-head h3{margin:0 0 2px}
+.fidelity{display:flex;flex-direction:column;align-items:center;justify-content:center;width:62px;height:62px;border-radius:50%;background:var(--paper);box-shadow:inset 0 0 0 3px currentColor,0 0 0 2px var(--cut);transform:rotate(-8deg);filter:url(#rough)}
+.fidelity b{font:700 22px/1 var(--f-type)}
+.fidelity span{font-size:10.5px;letter-spacing:.1em}
+.fidelity.good{color:var(--good)}.fidelity.warn{color:var(--warn)}.fidelity.bad{color:var(--bad)}
 /* 画稿：编号图例 */
 .skctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
 .skkey{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:12px;background:var(--paper-2);border-radius:8px}
@@ -341,7 +358,8 @@ dialog.paint{width:min(1100px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
 .proc-head{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap}
 .proc-head h3{margin:0;font-family:var(--f-disp);font-weight:400;font-size:20px}
 .proc-head .btn:first-of-type{margin-left:auto}
-.proc-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+.proc-steps{list-style:none;margin:0;padding:0 0 8px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(190px,220px);gap:16px;overflow-x:auto;scroll-snap-type:x proximity}
+.proc-steps li{scroll-snap-align:start}
 @media (max-width:760px){.proc-steps{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(150px,46%);overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}.proc-steps li{scroll-snap-align:start}.proc{padding:14px}}
 .pstep{display:flex;flex-direction:column;gap:8px;min-width:0;border:0;background:var(--paper-2);border-radius:8px;padding:10px;text-align:left;font:inherit;color:inherit;cursor:pointer;width:100%}
 .pstep[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
@@ -360,15 +378,15 @@ dialog.paint{width:min(1100px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
 .seedthumbs figcaption{font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* 从小红书收集 */
-.collect{padding:18px;margin-bottom:26px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 24px;align-items:center}
+.collect{padding:18px;margin-bottom:26px}
 .collect h3{margin:0 0 4px;font-family:var(--f-disp);font-weight:400;font-size:20px}
 .collect p{margin:0;font-size:13.5px;color:var(--ink-2)}
 .collect .xhs{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
 .collect .xhs a{text-decoration:none}
 .collect .xhs a::after{content:" ↗";color:var(--ink-3);font-size:11px}
-.collect .go{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.collect .go{display:flex}
 .collect .go small{font-size:12px;color:var(--ink-3);text-align:center}
-@media (max-width:760px){.collect{grid-template-columns:1fr;padding:14px}}
+@media (max-width:760px){.collect{padding:14px}}
 
 /* ---------- 我的笔 ---------- */
 .pens-top{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;margin-bottom:18px}
@@ -467,10 +485,10 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
       <div><h1><span class="washi">随类换色台</span></h1><p>丙烯马克笔 · MKB2309-120</p></div>
     </div>
     <nav class="nav" role="tablist" aria-label="工作区">
-      <button role="tab" type="button" id="t-swap" data-tab="swap" aria-controls="p-swap" aria-selected="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="8" height="8" rx="1.5"/><rect x="13" y="12" width="8" height="8" rx="1.5"/><path d="M14 5h3.5a2 2 0 0 1 2 2v2.5M18 7.5l1.5 2 1.5-2M10 19H6.5a2 2 0 0 1-2-2v-2.5M6 16.5l-1.5-2-1.5 2"/></svg><span>换色</span></button>
-      <button role="tab" type="button" id="t-want" data-tab="want" aria-controls="p-want" aria-selected="false">
+      <button role="tab" type="button" id="t-want" data-tab="want" aria-controls="p-want" aria-selected="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3h11v18l-5.5-4-5.5 4z"/></svg><span>想画</span><i class="badge" id="wantBadge" hidden></i></button>
+      <button role="tab" type="button" id="t-swap" data-tab="swap" aria-controls="p-swap" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="8" height="8" rx="1.5"/><rect x="13" y="12" width="8" height="8" rx="1.5"/><path d="M14 5h3.5a2 2 0 0 1 2 2v2.5M18 7.5l1.5 2 1.5-2M10 19H6.5a2 2 0 0 1-2-2v-2.5M6 16.5l-1.5-2-1.5 2"/></svg><span>换色</span></button>
       <button role="tab" type="button" id="t-done" data-tab="done" aria-controls="p-done" aria-selected="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1.5"/><rect x="6.5" y="5.5" width="11" height="10"/><path d="M6.5 13l3-3 3 3 2-2 3 3"/></svg><span>画过</span></button>
       <button role="tab" type="button" id="t-pens" data-tab="pens" aria-controls="p-pens" aria-selected="false">
@@ -491,18 +509,21 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
         <div class="stage-head">
           <span class="washi b" id="srcTitle">随机生成</span>
           <span class="tag" id="srcKind">示例图</span>
-          <button class="btn small sp" type="button" id="cropGo">裁剪</button>
-          <label class="btn small" for="fileIn">换图</label>
+          <span class="sp row" style="gap:6px">
+            <button class="btn small" type="button" id="srcGo">换图</button>
+            <button class="btn small" type="button" id="cropGo">裁剪</button>
+            <button class="btn small primary" type="button" id="paintGo2">开始画</button>
+          </span>
         </div>
+        <div class="itembar" id="itemBar" hidden></div>
         <div class="view-row">
           <div class="pills" role="group" aria-label="看哪一种">
             <button type="button" data-view="orig" aria-pressed="false">原图</button>
             <button type="button" data-view="pens" aria-pressed="true">我的笔</button>
             <button type="button" data-view="compare" aria-pressed="false">对比</button>
-            <button type="button" data-view="lines" aria-pressed="false">线稿</button>
             <button type="button" data-view="sketch" aria-pressed="false">画稿</button>
           </div>
-          <label class="check"><input type="checkbox" id="lineOn" checked> 叠加勾线</label>
+          <label class="check" id="lineOnWrap"><input type="checkbox" id="lineOn" checked> 叠加勾线</label>
           <span class="hint" id="viewHint">点图上任意一处，看最接近的是哪支笔</span>
         </div>
         <div class="cv-wrap" id="cvWrap">
@@ -512,7 +533,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           <div class="cropbox" id="cropBox" hidden><i data-ch="0"></i><i data-ch="1"></i><i data-ch="2"></i><i data-ch="3"></i></div>
         </div>
         <div class="skctl" id="skCtl" hidden>
-          <div class="pills" role="group" aria-label="画稿底色" id="skFill"><button type="button" data-fill="0" aria-pressed="false">白纸</button><button type="button" data-fill="0.35" aria-pressed="true">淡彩</button><button type="button" data-fill="1" aria-pressed="false">全彩（检查复原）</button></div>
+          <div class="pills" role="group" aria-label="画稿底色" id="skFill"><button type="button" data-fill="line" aria-pressed="false">只有线稿</button><button type="button" data-fill="0" aria-pressed="false">白纸</button><button type="button" data-fill="0.35" aria-pressed="true">淡彩</button><button type="button" data-fill="1" aria-pressed="false">全彩（检查复原）</button></div>
           <div class="pills" role="group" aria-label="写什么" id="skLab"><button type="button" data-sl="num" aria-pressed="true">写编号</button><button type="button" data-sl="no" aria-pressed="false">写色号</button></div>
         </div>
         <div class="skkey" id="skKey" hidden></div>
@@ -521,29 +542,12 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
       </div>
 
       <aside class="side">
-        <div class="paper src-card taped" style="--tp:var(--tape-b)">
-          <h3>换一张图</h3>
-          <div class="pills" role="group" aria-label="这张图是">
-            <button type="button" data-kind="art" aria-pressed="true">别人的画</button>
-            <button type="button" data-kind="photo" aria-pressed="false">我的照片 → 画稿</button>
-          </div>
-          <label class="drop" id="drop" for="fileIn">
-            <b id="dropTitle">选一张图，或拖进来</b>
-            <small id="dropSub">小红书里长按保存图片 / 截图都行，电脑上可以直接粘贴</small>
-          </label>
-          <input type="file" id="fileIn" accept="image/*" hidden>
-          <div class="field" id="shareField">
-            <label class="label" for="shareIn">分享文字（可选，用来自动填标题和链接）</label>
-            <input type="text" id="shareIn" placeholder="粘贴「复制链接」得到的那一段文字" autocomplete="off">
-            <p class="share-parsed" id="shareParsed" hidden></p>
-          </div>
-        </div>
-
         <div class="paper pens-card">
           <div class="pens-head">
-            <h3>要用的笔</h3>
-            <span><span class="flap" id="penCount"></span> <span class="hint" style="display:inline">支</span></span>
+            <div><h3>要用的笔</h3><span class="hint"><span class="flap" id="penCount"></span> 支</span></div>
+            <div class="fidelity" id="fidelity" title="按面积算：原图的颜色和你的笔有多接近" hidden><b id="fidN"></b><span>复原度</span></div>
           </div>
+          <p class="hint" id="fidHint" hidden></p>
           <details class="adj" id="adj"><summary><span>调整</span><b id="adjSum">10 色 · 简化 1 · 原色</b></summary><div>
           <div class="ctl"><label for="nIn">颜色数</label><input type="range" id="nIn" min="4" max="28" value="16"><output id="nOut" for="nIn">16</output></div>
           <div class="ctl" id="detailCtl"><label for="detIn">简化</label><input type="range" id="detIn" min="0" max="4" value="0"><output id="detOut" for="detIn">0</output></div>
@@ -564,7 +568,6 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
             <button class="btn primary" type="button" id="saveWant">存进「想画」</button>
             <button class="btn" type="button" id="saveDone">已经画完了，记一笔</button>
           </div>
-          <p class="hint" id="itemLink" hidden></p>
         </div>
       </aside>
     </div>
@@ -579,19 +582,21 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
   <!-- 想画 -->
   <section id="p-want" class="panel" role="tabpanel" aria-labelledby="t-want" hidden>
     <div class="collect paper taped" style="--tp:var(--tape-a)">
-      <div>
-        <h3>从小红书收集</h3>
-        <p>点下面的词去小红书搜，看到喜欢的就长按「保存图片」，存好一批再回来点「一次导入多张」，全选刚存的图。每张都会自动配好你的笔，以后在这里搜就能找到。</p>
+      <div class="col-head">
+        <div><h3>从小红书收集</h3><p id="collectLead">去小红书搜，喜欢的长按「保存图片」，回来一次全导进来，每张都会自动配好你的笔。</p></div>
+        <div class="go">
+          <label class="btn primary" for="bulkIn">一次导入多张</label>
+          <button class="btn quiet small" type="button" id="collectMore" aria-expanded="true">收起</button>
+        </div>
       </div>
-      <div class="go">
-        <label class="btn primary" for="bulkIn">一次导入多张</label>
-        <small id="bulkMsg">可以多选</small>
-      </div>
+      <div class="col-body" id="collectBody">
+      <small id="bulkMsg" class="hint"></small>
       <div class="xhs" id="xhsLinks"></div>
       <div class="shareBulk">
         <label class="label" for="shareBulk">只有链接也行：把小红书「复制链接」的文字贴进来（可以一次贴好几条），先存成「待补图」卡片，有空再补图</label>
         <textarea id="shareBulk" rows="3" placeholder="39 【SALTED FISH 🐟 - oO圈圈Oo🌻 | 小红书 - 你的生活兴趣社区】 😆 … 😆 https://www.xiaohongshu.com/…"></textarea>
         <div class="row"><button class="btn" type="button" id="shareSave">按链接先存起来</button><span class="hint" id="shareMsg"></span></div>
+      </div>
       </div>
     </div>
     <input type="file" id="bulkIn" accept="image/*" multiple hidden>
@@ -700,6 +705,28 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
       <button class="btn primary" type="submit" id="iSave">保存</button>
     </div>
   </form>
+</dialog>
+
+<!-- 换图 -->
+<dialog id="dlgSrc" aria-labelledby="srcH">
+  <div class="dlg">
+    <div class="dlg-head"><div><span class="washi sm b">换图</span><h2 id="srcH">换一张要画的图</h2></div><button class="x" type="button" data-close aria-label="关闭">×</button></div>
+    <div class="pills" role="group" aria-label="这张图是">
+      <button type="button" data-kind="art" aria-pressed="true">别人的画（临摹）</button>
+      <button type="button" data-kind="photo" aria-pressed="false">我的照片 → 画稿</button>
+    </div>
+    <label class="drop" id="drop" for="fileIn">
+      <b id="dropTitle">选一张图，或拖进来</b>
+      <small id="dropSub">小红书里长按保存图片 / 截图都行，电脑上可以直接粘贴</small>
+    </label>
+    <input type="file" id="fileIn" accept="image/*" hidden>
+    <div class="field" id="shareField">
+      <label class="label" for="shareIn">分享文字（可选，用来自动填标题和链接）</label>
+      <input type="text" id="shareIn" placeholder="粘贴「复制链接」得到的那一段文字" autocomplete="off">
+      <p class="share-parsed" id="shareParsed" hidden></p>
+    </div>
+    <p class="hint">图里有手、桌子、笔的话，换好以后点「裁剪」只框住画，颜色会更准。</p>
+  </div>
 </dialog>
 
 <!-- 开画 -->
@@ -1208,8 +1235,7 @@ async function setWork(cv, opts) {
   $('#srcKind').textContent = Swap.kind === 'photo' ? '照片 → 画稿' : '参考图';
   $('#pickOut').hidden = true; $('#pin').hidden = true;
   const it = Swap.itemId && Store.items.get(Swap.itemId);
-  $('#itemLink').hidden = !it;
-  if (it) $('#itemLink').innerHTML = '正在改「' + esc(it.title || '未命名') + '」的配色，存的时候会更新它。';
+  renderItemBar();
   $('#saveWant').textContent = it ? '更新这张的配色' : '存进「想画」';
   await runAnalyze();
 }
@@ -1285,8 +1311,8 @@ function sketchData() {
 }
 function renderSkKey() {
   const box = $('#skKey'), on = Swap.view === 'sketch' && !!Swap.res;
-  $('#skCtl').hidden = !on; box.hidden = !on;
-  if (!on) return;
+  $('#skCtl').hidden = !on; box.hidden = !on || Swap.skFill === 'line'; $('#skLab').hidden = Swap.skFill === 'line';
+  if (!on || Swap.skFill === 'line') return;
   const sk = sketchData(), N = Swap.res.W * Swap.res.H;
   box.innerHTML = sk.order.map(k => { const key = sk.keys[k], p = key.no ? penByNo(key.no) : null; return '<span class="kk"><i class="kn">' + sk.num[k] + '</i>' + (p ? penHTML(p, 'mini') : '<i class="sw" style="--c:' + key.hex + '"></i>') + '<span><b>' + esc(p ? p.name || p.no : '没配笔') + '</b><small>' + esc(p ? p.no : '') + ' · ' + Math.max(1, Math.round(sk.area[k] / N * 100)) + '%</small></span></span>'; }).join('');
 }
@@ -1321,7 +1347,7 @@ function render(cv, view, step) {
   const col = Swap.map.map((m, i) => { const p = penForLabel(i); return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
   const INK = [36, 38, 50], PAPER = [251, 250, 246], lk = Swap.lineOn ? .9 / 255 : 0;
   const put = (i, c, a) => { d[i * 4] = c[0] + (INK[0] - c[0]) * a; d[i * 4 + 1] = c[1] + (INK[1] - c[1]) * a; d[i * 4 + 2] = c[2] + (INK[2] - c[2]) * a; d[i * 4 + 3] = 255; };
-  if (view === 'lines') {
+  if (view === 'lines' || (view === 'sketch' && Swap.skFill === 'line')) {
     for (let i = 0; i < N; i++) put(i, PAPER, LN[i] / 255);
   } else if (view === 'step') {
     const so = Swap.cache.stepOf;
@@ -1338,7 +1364,7 @@ function render(cv, view, step) {
     for (let i = 0; i < N; i++) put(i, col[lab[i]], LN[i] * lk);
   }
   x.putImageData(im, 0, 0);
-  if (view === 'sketch') {
+  if (view === 'sketch' && Swap.skFill !== 'line') {
     const sk = sketchData();
     x.textAlign = 'center'; x.textBaseline = 'middle';
     sk.placed.forEach(m => {
@@ -1392,10 +1418,42 @@ function regionMarks(lab, W, H) {
   return marks;
 }
 
+/* ================= 这一张的信息条 ================= */
+function renderItemBar() {
+  const bar = $('#itemBar'), it = Swap.itemId && Store.items.get(Swap.itemId);
+  if (!it) {
+    const sh = Swap.share;
+    bar.hidden = !(sh && (sh.author || sh.url));
+    if (!bar.hidden) bar.innerHTML = (sh.author ? '<span class="by">' + esc(sh.author) + '</span>' : '') + (sh.url ? '<a class="link" href="' + esc(sh.url) + '" target="_blank" rel="noopener">看原帖 ↗</a>' : '') + (Swap.demo ? '<span class="tag">示例</span>' : '');
+    return;
+  }
+  bar.hidden = false;
+  bar.innerHTML = (it.author ? '<span class="by">' + esc(it.author) + '</span>' : '') + hearts(it.love) + (it.tags || []).slice(0, 4).map(t => '<span class="tag">' + esc(t) + '</span>').join('') +
+    (it.kind === 'done' ? '<span class="st good">画过了</span>' : it.next ? '<span class="st good">下一张就画它</span>' : '<button class="link" type="button" data-setnext="' + it.id + '">设为下一张</button>') +
+    '<button class="link" type="button" data-open="' + it.id + '">编辑信息</button>' + (it.link ? '<a class="link" href="' + esc(it.link) + '" target="_blank" rel="noopener">看原帖 ↗</a>' : '');
+}
+$('#itemBar').addEventListener('click', e => {
+  const b = e.target.closest('[data-setnext]'); if (!b) return;
+  const it = Store.items.get(b.dataset.setnext); if (!it) return;
+  Store.items.forEach(o => { if (o.id !== it.id && o.next) { o.next = false; saveItem(o); } });
+  it.next = true; saveItem(it); renderItemBar(); toast('定了，下一张就画它。');
+});
+
 /* ================= 换色：右侧清单 ================= */
 let openAlt = null;
+function renderFidelity() {
+  let sw = 0, sd = 0, worst = null;
+  Swap.map.forEach(m => { const p = m.no ? penByNo(m.no) : null; if (!p || m.c.share < .002) return; const d = dE(m.c.lab, hexLab(p.hex)); sw += m.c.share; sd += m.c.share * d; if (d >= 9 && m.c.share > .02 && (!worst || m.c.share > worst.m.c.share)) worst = {m, p, d}; });
+  const el = $('#fidelity'); if (!sw) { el.hidden = true; $('#fidHint').hidden = true; return; }
+  const score = Math.max(0, Math.min(100, Math.round(100 - (sd / sw) * 3.2)));
+  el.hidden = false; $('#fidN').textContent = score;
+  el.className = 'fidelity ' + (score >= 85 ? 'good' : score >= 70 ? 'warn' : 'bad');
+  const h = $('#fidHint');
+  if (worst) { h.hidden = false; h.innerHTML = '最偏的一块：原图 <i class="sw" style="--c:' + worst.m.c.hex + ';width:18px;height:14px;vertical-align:-2px"></i> 用的是 ' + esc(worst.p.no) + '。点那一行的「换」试试别的笔，或者叠色。'; }
+  else h.hidden = true;
+}
 function renderSwapList() {
-  renderSteps(); renderSkKey();
+  renderSteps(); renderSkKey(); renderFidelity();
   const gs = groups(), ul = $('#plist');
   $('#penCount').innerHTML = flap(gs.length);
   if (!Store.pens.length) { ul.innerHTML = '<li class="hint">色卡里还没有笔，先去「我的笔」加。</li>'; return; }
@@ -1582,12 +1640,13 @@ $('#pickOut').addEventListener('click', e => {
 function setView(v) {
   Swap.view = v;
   $$('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
-  $('#viewHint').textContent = ({sketch: '每块写着编号，对照下面的图例换笔；选「全彩」看填满后像不像原图', lines: '线稿：照着在纸上轻轻起稿', compare: '左右拖动中间的线，对比原图和用你的笔画出来的样子'})[v] || '点图上任意一处，看最接近的是哪支笔';
+  $('#viewHint').textContent = ({sketch: '照着起稿、按编号换笔。选「全彩」看填满后像不像原图', lines: '线稿：照着在纸上轻轻起稿', compare: '左右拖动中间的线，对比原图和用你的笔画出来的样子'})[v] || '点图上任意一处，看最接近的是哪支笔';
   $('#swapCv').style.touchAction = v === 'compare' ? 'none' : 'manipulation';
+  $('#lineOnWrap').hidden = !['pens', 'compare'].includes(v);
   $$('#procSteps [data-step]').forEach(x => x.setAttribute('aria-pressed', 'false'));
   render(); renderSkKey();
 }
-$$('#skFill [data-fill]').forEach(b => b.addEventListener('click', () => { Swap.skFill = +b.dataset.fill; $$('#skFill [data-fill]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); }));
+$$('#skFill [data-fill]').forEach(b => b.addEventListener('click', () => { Swap.skFill = b.dataset.fill === 'line' ? 'line' : +b.dataset.fill; renderSkKey(); $$('#skFill [data-fill]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); }));
 $$('#skLab [data-sl]').forEach(b => b.addEventListener('click', () => { Swap.skLab = b.dataset.sl; $$('#skLab [data-sl]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); }));
 $$('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 $('#lineOn').addEventListener('change', e => { Swap.lineOn = e.target.checked; render(); renderSteps(); });
@@ -1609,9 +1668,11 @@ async function takeFile(file) {
     const cv = await fileToCanvas(file, 1400);
     const sh = Swap.kind === 'art' ? parseShare($('#shareIn').value) : null;
     await setWork(cv, {kind: Swap.kind, style: Swap.kind === 'photo' && Swap.styleUser ? Swap.style : '', title: sh && sh.title ? sh.title : (Swap.kind === 'photo' ? '我的照片' : (file.name || '参考图').replace(/\.[^.]+$/, '')), share: sh});
-    showTab('swap');
+    showTab('swap'); if ($('#dlgSrc').open) $('#dlgSrc').close();
   } catch (e) { toast('这张图打不开，换 JPG 或 PNG 试试。'); }
 }
+$('#srcGo').addEventListener('click', () => $('#dlgSrc').showModal());
+$('#paintGo2').addEventListener('click', () => openPaint());
 $('#fileIn').addEventListener('change', e => { takeFile(e.target.files[0]); e.target.value = ''; });
 ['#drop', '#cvWrap'].forEach(sel => {
   const el = $(sel);
@@ -1620,7 +1681,7 @@ $('#fileIn').addEventListener('change', e => { takeFile(e.target.files[0]); e.ta
   el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('over'); takeFile(e.dataTransfer.files[0]); });
 });
 document.addEventListener('paste', e => {
-  if (e.target && e.target.closest && e.target.closest('dialog')) return;
+  const dlg = e.target && e.target.closest && e.target.closest('dialog'); if (dlg && dlg.id !== 'dlgSrc') return;
   const items = Array.from((e.clipboardData && e.clipboardData.items) || []);
   const img = items.find(i => i.kind === 'file' && /^image\//.test(i.type));
   if (img) { e.preventDefault(); takeFile(img.getAsFile()); return; }
@@ -1805,7 +1866,11 @@ function cardPens(it, max) {
   const ps = it.pens || [], show = ps.slice(0, max);
   return '<div class="penstrip">' + show.map(itemPenHTML).join('') + (ps.length > max ? '<span class="tag">+' + (ps.length - max) + '</span>' : '') + '</div>';
 }
+let collectAuto = true;
+function setCollect(open) { $('#collectBody').hidden = !open; $('#collectMore').textContent = open ? '收起' : '搜索词、按链接存'; $('#collectMore').setAttribute('aria-expanded', String(open)); }
+$('#collectMore').addEventListener('click', () => { collectAuto = false; setCollect($('#collectBody').hidden); });
 function renderWant() {
+  if (collectAuto) setCollect(!Array.from(Store.items.values()).some(i => i.kind === 'want'));
   if (typeof SEEDS !== 'undefined') renderSeeds();
   const all = Array.from(Store.items.values()).filter(i => i.kind === 'want');
   $('#wantBadge').hidden = !all.length; $('#wantBadge').textContent = all.length;
@@ -1914,7 +1979,7 @@ $$('[data-wsort]').forEach(b => b.addEventListener('click', () => { wantF.sort =
 $('#wantTags').addEventListener('click', e => { const b = e.target.closest('[data-wtag]'); if (!b) return; wantF.tag = wantF.tag === b.dataset.wtag ? null : b.dataset.wtag; renderWant(); });
 document.addEventListener('click', e => {
   const o = e.target.closest('[data-open]');
-  if (o && !o.closest('dialog')) { const it = Store.items.get(o.dataset.open); if (!it) return; if (o.dataset.mode === 'swap') openInSwap(it); else if (o.dataset.mode === 'paint') openInSwap(it).then(openPaint); else openItem(it, o.dataset.mode === 'done' || it.kind === 'done'); return; }
+  if (o && !o.closest('dialog')) { const it = Store.items.get(o.dataset.open); if (!it) return; const direct = o.classList.contains('icard') && it.kind === 'want' && it.thumb; if (o.dataset.mode === 'swap' || direct) openInSwap(it).then(() => window.scrollTo({top: 0})); else if (o.dataset.mode === 'paint') openInSwap(it).then(openPaint); else openItem(it, o.dataset.mode === 'done' || it.kind === 'done'); return; }
   const g = e.target.closest('[data-go]'); if (g) { showTab(g.dataset.go); return; }
   if (e.target.closest('#emptyAddDone')) { newDone(); return; }
   if (e.target.closest('[data-open-import]')) { openImport(); return; }
@@ -2006,7 +2071,9 @@ async function openInSwap(it) {
   try {
     const img = await loadImg(data);
     showTab('swap');
+    Swap.split = .5; Swap.view = 'compare';
     await setWork(img, {itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', style: it.style || '', ai: it.plan2 || null, title: it.title, n: it.n, detail: it.detail, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
+    setView('compare');
   } catch (e) { toast('图打不开了。'); }
 }
 function fromSwap(kind) {
@@ -2250,6 +2317,7 @@ function showTab(t) {
 }
 $$('.nav [role=tab]').forEach(b => b.addEventListener('click', () => { showTab(b.dataset.tab); window.scrollTo({top: 0}); }));
 function changed() {
+  if (typeof renderItemBar === 'function' && Swap.itemId) renderItemBar();
   $('#sync').textContent = Store.mode === 'cloud' ? '已同步' : '只存在这台设备';
   $('#sync').classList.toggle('cloud', Store.mode === 'cloud');
   $('#demoBanner').hidden = !Store.demo || lsGet(LS.banner) === 'off';
@@ -2290,7 +2358,7 @@ $('#bulkIn').addEventListener('change', async e => {
       ok++;
     } catch (er) {}
   }
-  msg.textContent = '可以多选';
+  msg.textContent = '';
   toast('导入了 ' + ok + ' 张' + (ok < files.length ? '，有 ' + (files.length - ok) + ' 张打不开' : '') + '。点卡片可以改标题、加标签。');
   showTab('want');
 });
@@ -2353,9 +2421,8 @@ async function bootSample() {
     const res = await fetch(o.f); if (!res.ok) throw new Error('fetch');
     const cv = await fileToCanvas(await res.blob(), 1400);
     if (!Swap.demo && Swap.work) return;
-    setView('orig');
     await setWork(cv, {demo: true, kind: 'art', title: o.title, n: 16, detail: 0, style: '', share: {title: o.title, author: o.author, url: o.url, tags: o.tags}});
-    $('#srcKind').textContent = '示例 · ' + o.author;
+    $('#srcKind').textContent = '示例 · ' + o.author; Swap.split = .5; setView('compare');
   } catch (e) { $('#busy').hidden = true; }
 }
 
@@ -2373,7 +2440,7 @@ function openOwnIfDemo() {
 (function boot() {
   changed();
   const h = (location.hash || '').slice(1), saved = lsGet(LS.tab);
-  const tab = ['swap', 'want', 'done', 'pens'].includes(h) ? h : (['swap', 'want', 'done', 'pens'].includes(saved) ? saved : 'swap');
+  const tab = ['swap', 'want', 'done', 'pens'].includes(h) ? h : (['swap', 'want', 'done', 'pens'].includes(saved) ? saved : 'want');
   showTab(tab);
   Swap.demo = true;
   if (Array.from(Store.items.values()).some(i => i.kind === 'want' && i.thumb)) openOwnIfDemo();

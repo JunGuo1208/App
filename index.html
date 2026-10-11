@@ -353,6 +353,19 @@ dialog.paint{width:min(1100px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
   .pt-timer .flap{font-size:20px}
 }
 
+/* 专业拆解 */
+.anal{display:flex;flex-direction:column;gap:12px;background:var(--paper-2);border-radius:10px;padding:14px 16px}
+.anal .look{margin:0;font-size:15.5px;font-weight:600}
+.anal-grid{margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.anal-grid div{background:var(--paper);border-radius:8px;padding:10px 12px;box-shadow:0 1px 2px rgba(30,40,70,.06)}
+.anal-grid dt{font-family:var(--f-disp);color:var(--shu);font-size:15px;margin-bottom:2px}
+.anal-grid dd{margin:0;font-size:13.5px;color:var(--ink-2)}
+.anal .prep{margin:0;font-size:13.5px;color:var(--ink-2)}
+.anal .prep b{display:inline-block;margin-right:8px;font-family:var(--f-disp);font-weight:400;color:var(--barrel)}
+.anal .tips{margin:0;padding-left:1.2em;font-size:13.5px;color:var(--ink-2)}
+.sbadges{display:flex;flex-wrap:wrap;gap:4px}
+.sbadges i{font-style:normal;font-size:11.5px;line-height:18px;padding:0 7px;border-radius:3px;background:var(--paper);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--rule)}
+.sbadges i.w{background:var(--warn-soft);color:var(--warn);box-shadow:none}
 /* 上色过程 */
 .proc{margin-top:24px;padding:18px;display:flex;flex-direction:column;gap:14px}
 .proc-head{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap}
@@ -533,7 +546,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           <div class="cropbox" id="cropBox" hidden><i data-ch="0"></i><i data-ch="1"></i><i data-ch="2"></i><i data-ch="3"></i></div>
         </div>
         <div class="skctl" id="skCtl" hidden>
-          <div class="pills" role="group" aria-label="画稿底色" id="skFill"><button type="button" data-fill="line" aria-pressed="false">只有线稿</button><button type="button" data-fill="0" aria-pressed="false">白纸</button><button type="button" data-fill="0.35" aria-pressed="true">淡彩</button><button type="button" data-fill="1" aria-pressed="false">全彩（检查复原）</button></div>
+          <div class="pills" role="group" aria-label="画稿底色" id="skFill"><button type="button" data-fill="line" aria-pressed="false">起稿线</button><button type="button" data-fill="0" aria-pressed="false">白纸</button><button type="button" data-fill="0.35" aria-pressed="true">淡彩</button><button type="button" data-fill="1" aria-pressed="false">全彩（检查复原）</button></div>
           <div class="pills" role="group" aria-label="写什么" id="skLab"><button type="button" data-sl="num" aria-pressed="true">写编号</button><button type="button" data-sl="no" aria-pressed="false">写色号</button></div>
         </div>
         <div class="skkey" id="skKey" hidden></div>
@@ -573,7 +586,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
     </div>
     <section class="proc paper" id="procOut" hidden>
       <div class="proc-head"><h3>上色过程</h3><span class="hint">先画哪、后画哪。点一步，上面就显示画到这一步的样子。</span>
-        <div class="pills" role="group" aria-label="用哪种顺序" id="procMode" hidden><button type="button" data-pm="ai" aria-pressed="true">Claude 看图排的</button><button type="button" data-pm="auto" aria-pressed="false">自动排的</button></div><button class="btn small" type="button" id="aiPlan" hidden>让 Claude 细讲每一步</button><button class="btn small primary" type="button" id="paintGo">开始画（一步步来）</button></div>
+        <div class="pills" role="group" aria-label="用哪种顺序" id="procMode" hidden><button type="button" data-pm="ai" aria-pressed="true">Claude 看图排的</button><button type="button" data-pm="auto" aria-pressed="false">自动排的</button></div><button class="btn small shu" type="button" id="aiPlan" hidden>Claude 专业拆解</button><button class="btn small primary" type="button" id="paintGo">开始画（一步步来）</button></div>
       <div id="procTips" hidden></div>
       <ol class="proc-steps" id="procSteps"></ol>
     </section>
@@ -996,6 +1009,7 @@ if (CL) {
 function updateAI() {
   const ok = !!sampleFn && !aiOff && !!imgCaps;
   $('#aiPlan').hidden = !ok;
+  if (ok && typeof Swap !== 'undefined' && Swap.itemId && Swap.res) { const it = Store.items.get(Swap.itemId); if (it && !it.plan2) runAi(true); }
   $('#impAI').hidden = !ok;
 }
 function aiErr(e) {
@@ -1287,7 +1301,7 @@ Swap.match = function () {
     if (o) no = o.no;
     return {c, rank, no};
   });
-  this.cache.sk = null;
+  this.cache.sk = null; this.cache.ol = null;
 };
 /* 画稿用的干净分区：同一支笔的块合并，抹平毛边，太碎的并进旁边；编号按面积从大到小 */
 function sketchData() {
@@ -1308,6 +1322,26 @@ function sketchData() {
     if (placed.length >= 90) break;
   }
   return (Swap.cache.sk = {lab, keys, num, order, area, placed});
+}
+/* 起稿线：比画稿分区再粗一档，只留大形的外轮廓 */
+function outlineData() {
+  if (Swap.cache.ol) return Swap.cache.ol;
+  const r = Swap.res, W = r.W, H = r.H, N = W * H, sk = sketchData();
+  // 缩小到一半再抹平，轮廓会顺很多；最后再放回原尺寸
+  const w2 = Math.ceil(W / 2), h2 = Math.ceil(H / 2);
+  let sm = new Uint8Array(w2 * h2);
+  for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) sm[y * w2 + x] = sk.lab[Math.min(H - 1, y * 2) * W + Math.min(W - 1, x * 2)];
+  for (let p = 0; p < 6; p++) sm = majority(sm, w2, h2, sk.keys.length);
+  sm = mergeSmall(sm, w2, h2, Math.round(w2 * h2 * .005));
+  for (let p = 0; p < 2; p++) sm = majority(sm, w2, h2, sk.keys.length);
+  let lab = new Uint8Array(N);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) lab[y * W + x] = sm[(y >> 1) * w2 + (x >> 1)];
+  for (let p = 0; p < 3; p++) lab = majority(lab, W, H, sk.keys.length);
+  const raw = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const x = i % W; if ((x < W - 1 && lab[i + 1] !== lab[i]) || (i + W < N && lab[i + W] !== lab[i])) raw[i] = 1; }
+  const soft = gaussBlur(raw, W, H, .9), edge = new Float32Array(N);
+  for (let i = 0; i < N; i++) edge[i] = Math.min(1, soft[i] * 2.4);
+  return (Swap.cache.ol = {lab, edge});
 }
 function renderSkKey() {
   const box = $('#skKey'), on = Swap.view === 'sketch' && !!Swap.res;
@@ -1347,11 +1381,15 @@ function render(cv, view, step) {
   const col = Swap.map.map((m, i) => { const p = penForLabel(i); return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
   const INK = [36, 38, 50], PAPER = [251, 250, 246], lk = Swap.lineOn ? .9 / 255 : 0;
   const put = (i, c, a) => { d[i * 4] = c[0] + (INK[0] - c[0]) * a; d[i * 4 + 1] = c[1] + (INK[1] - c[1]) * a; d[i * 4 + 2] = c[2] + (INK[2] - c[2]) * a; d[i * 4 + 3] = 255; };
-  if (view === 'lines' || (view === 'sketch' && Swap.skFill === 'line')) {
+  if (view === 'sketch' && Swap.skFill === 'line') {
+    const ed = outlineData().edge;
+    for (let i = 0; i < N; i++) put(i, PAPER, ed[i] * .85);
+  } else if (view === 'lines') {
     for (let i = 0; i < N; i++) put(i, PAPER, LN[i] / 255);
   } else if (view === 'step') {
     const so = Swap.cache.stepOf;
-    for (let i = 0; i < N; i++) { const on = so && so[i] <= step; put(i, on ? col[lab[i]] : PAPER, on ? LN[i] * lk : LN[i] / 255 * .5); }
+    const ed = outlineData().edge;
+    for (let i = 0; i < N; i++) { const on = so && so[i] <= step; put(i, on ? col[lab[i]] : PAPER, on ? LN[i] * lk : ed[i] * .55); }
   } else if (view === 'sketch') {
     const sk = sketchData(), sl = sk.lab, f = Swap.skFill, EDGE = [84, 86, 100];
     const fillc = sk.keys.map(k => { const c = hex2rgb(k.hex); return [PAPER[0] + (c[0] - PAPER[0]) * f, PAPER[1] + (c[1] - PAPER[1]) * f, PAPER[2] + (c[2] - PAPER[2]) * f]; });
@@ -1500,13 +1538,13 @@ function whereOf(c, W, H) {
   if (w > .7) s += '整片';
   return s;
 }
-const AUTO_STEPS = [
-  {t: '先铺背景', d: '宽头、同一个方向涂满，边缘先留一点，等主体画完再收边。'},
-  {t: '主体的大块', d: '把主体的大块颜色先铺上，先不管细节。'},
-  {t: '中等块面和过渡', d: '画中等大小的块面和颜色过渡，稍微压住前一层，接缝就不露白。'},
-  {t: '小细节', d: '换细头补小块颜色。'},
-  {t: '暗部、剪影和勾线', d: '用深色压暗部、画剪影、勾轮廓，画面一下就立起来。'},
-  {t: '高光', d: '最后用白色、浅色点高光、勾亮边。一定等下面干透。'}
+const CATS = [
+  {s: '背景', tool: '粗头平涂', tip: '同一个方向一笔接一笔涂满，边缘先留一点，等主体画完再收边。'},
+  {s: '主体大块', tool: '粗头平涂', tip: '先把大的颜色铺上去，不管细节。'},
+  {s: '中间色块', tool: '中头', tip: '稍微压住前一层的边，接缝就不会露白。'},
+  {s: '小细节', tool: '细头', tip: '小块颜色一点点补，宁可少不要多。'},
+  {s: '暗部和剪影', tool: '细头勾线', tip: '压暗部、画剪影、勾轮廓，画面一下就立起来。'},
+  {s: '高光', tool: '细头点涂', tip: '最后点高光、勾亮边，下面一定要干透。'}
 ];
 function autoSteps() {
   const r = Swap.res, W = r.W, H = r.H, N = W * H, {comp, list} = regionInfo();
@@ -1522,24 +1560,39 @@ function autoSteps() {
     if (c.L > 84) return 5;
     return 3;
   });
-  const used = AUTO_STEPS.map((_, k) => cls.some(v => v === k));
-  const order = [], idx = new Int8Array(AUTO_STEPS.length).fill(-1);
-  AUTO_STEPS.forEach((_, k) => { if (used[k]) { idx[k] = order.length; order.push(k); } });
-  const last = Math.max(0, order.length - 1);
-  const stepOf = new Uint8Array(N);
-  for (let i = 0; i < N; i++) { const k = cls[comp[i]]; stepOf[i] = k < 0 ? last : idx[k]; }
-  const steps = order.map(k => {
-    const cs = list.filter((c, i) => cls[i] === k).sort((a, b) => b.area - a.area);
-    const nos = [], wh = new Map();
-    cs.forEach(c => { if (!nos.includes(c.no)) nos.push(c.no); const w = whereOf(c, W, H), arr = wh.get(c.no) || []; if (arr.length < 3 && !arr.includes(w)) arr.push(w); wh.set(c.no, arr); });
-    const parts = nos.slice(0, 4).map(no => { const p = penByNo(no); return (p.name || '') + '（' + no + '）画' + wh.get(no).join('、'); });
-    return {t: AUTO_STEPS[k].t, d: (parts.length ? parts.join('；') + '。' : '') + AUTO_STEPS[k].d, nos: nos.slice(0, 10)};
+  // 四个阶段：大面积 → 中块和细节 → 暗部 → 高光；每个阶段按笔拆开
+  const PH = [0, 0, 1, 1, 2, 3], per = new Map();
+  list.forEach((c, i) => { const k = cls[i]; if (k < 0) return; const ph = PH[k], key = ph + '|' + c.no; const e = per.get(key) || {ph, k, no: c.no, area: 0}; e.area += c.area; e.k = Math.min(e.k, k); per.set(key, e); });
+  // 同一支笔前面已经铺过、后面只剩一点点：跟着前面那一步一起画
+  per.forEach((e, key) => { e.to = key; if (e.ph === 1 || e.ph === 2) { const first = per.get('0|' + e.no) || (e.ph === 2 ? per.get('1|' + e.no) : null); if (first && (e.ph === 1 || e.area < N * .015)) e.to = first.to || ('0|' + e.no); } });
+  per.forEach(e => { if (e.to !== e.ph + '|' + e.no) { const t = per.get(e.to); if (t && t.to !== e.to) e.to = t.to; } });
+  const subs = new Map();
+  per.forEach((e, key) => { if (e.to !== key) return; const small = e.area < N * .008 && (e.ph === 1 || e.ph === 2); const sk = e.ph === 3 ? '3|all' : small ? e.ph + '|rest' : key; const m = subs.get(sk) || {k: e.k, ph: e.ph, rest: small || e.ph === 3, nos: [], area: 0}; m.area += e.area; m.k = Math.min(m.k, e.k); if (!m.nos.includes(e.no)) m.nos.push(e.no); subs.set(sk, m); e.sub = sk; });
+  per.forEach(e => { if (!e.sub) e.sub = per.get(e.to).sub; });
+  const Lof = no => hexLab(penByNo(no).hex)[0];
+  const arr = Array.from(subs.entries()).sort((a, b) => a[1].ph - b[1].ph || (a[1].rest - b[1].rest) || a[1].k - b[1].k || (a[1].ph === 2 ? b[1].area - a[1].area : Lof(b[1].nos[0]) - Lof(a[1].nos[0])));
+  const idx = new Map(); arr.forEach(([key], j) => idx.set(key, j));
+  const last = Math.max(0, arr.length - 1), stepOf = new Uint8Array(N), compStep = new Int16Array(list.length);
+  list.forEach((c, i) => { const k = cls[i]; compStep[i] = k < 0 ? last : idx.get(per.get(PH[k] + '|' + c.no).sub); });
+  for (let i = 0; i < N; i++) stepOf[i] = compStep[comp[i]];
+  const steps = arr.map(([key, m]) => {
+    const cs = list.filter((c, i) => cls[i] >= 0 && compStep[i] === idx.get(key)).sort((a, b) => b.area - a.area);
+    const C = m.ph === 3 ? CATS[5] : m.rest ? CATS[3] : CATS[m.k];
+    if (m.ph === 3) return {t: '高光和提亮', tool: C.tool, d: '用' + m.nos.map(no => (penByNo(no).name || '') + '（' + no + '）').join('、') + '点最亮的地方：' + Array.from(new Set(cs.slice(0, 8).map(c => whereOf(c, W, H)))).slice(0, 4).join('、') + '。' + C.tip, nos: m.nos.slice(0, 10)};
+    if (m.rest) {
+      return {t: (m.ph === 2 ? '暗部' : '细节') + '：其余小块', tool: C.tool, d: '把剩下零碎的小块补上：' + m.nos.slice(0, 6).map(no => (penByNo(no).name || '') + '（' + no + '）').join('、') + '。' + C.tip, nos: m.nos.slice(0, 10)};
+    }
+    const no = m.nos[0], p = penByNo(no), wh = [];
+    cs.forEach(c => { const w = whereOf(c, W, H); if (wh.length < 4 && !wh.includes(w)) wh.push(w); });
+    const label = m.ph === 0 ? (m.k === 0 ? '背景' : '主体大块') : m.ph === 1 ? '中块和细节' : '暗部和剪影';
+    const tool = m.ph === 0 ? '粗头平涂' : m.ph === 1 ? (m.area > N * .03 ? '中头' : '细头') : '细头勾线';
+    return {t: label + '：' + (p.name || no), tool, d: '用' + (p.name || '') + '（' + no + '）画' + wh.join('、') + '，约占画面 ' + Math.max(1, Math.round(m.area / N * 100)) + '%。' + (m.ph === 0 ? CATS[m.k].tip : m.ph === 1 ? CATS[2].tip : CATS[4].tip), nos: [no], wait: m.ph === 0};
   });
   return {steps, stepOf};
 }
 function aiSteps() {
   const a = Swap.ai, r = Swap.res, W = r.W, H = r.H, N = W * H, lab = r.labels;
-  const steps = a.steps.map(st => ({t: st.title, d: (st.where ? st.where + '：' : '') + st.how, nos: st.pens, box: st.box}));
+  const steps = a.steps.map(st => ({t: st.title, d: (st.where ? st.where + '：' : '') + st.how, nos: st.pens, box: st.box, tool: st.tool, wait: st.wait}));
   const last = steps.length - 1, stepOf = new Uint8Array(N);
   const penOf = Swap.map.map(m => m.no);
   for (let i = 0; i < N; i++) {
@@ -1563,19 +1616,21 @@ function renderSteps() {
   box.hidden = !steps.length;
   $('#procMode').hidden = !Swap.ai;
   $$('#procMode [data-pm]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pm === Swap.procMode)));
-  $('#aiPlan').textContent = Swap.ai ? '让 Claude 重新排' : '让 Claude 看图排顺序';
+  $('#aiPlan').textContent = Swap.ai ? '重新拆解' : 'Claude 专业拆解';
   const tips = $('#procTips');
-  if (Swap.ai && Swap.procMode === 'ai' && (Swap.ai.look || Swap.ai.tips.length)) { tips.hidden = false; tips.innerHTML = (Swap.ai.look ? '<p class="look">' + esc(Swap.ai.look) + '</p>' : '') + (Swap.ai.tips.length ? '<ul class="tips">' + Swap.ai.tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : ''); } else tips.hidden = true;
-  const ol = $('#procSteps');
-  ol.innerHTML = steps.map((st, k) => '<li><button type="button" class="pstep" data-step="' + k + '" aria-pressed="' + (Swap.view === 'step' && Swap.step === k) + '"><canvas width="10" height="10"></canvas><span class="n">第 ' + (k + 1) + ' 步</span><b>' + esc(st.t) + '</b><span class="penstrip">' + st.nos.map(n => penHTML(penByNo(n), 'mini')).join('') + '</span><p>' + esc(st.d) + '</p></button></li>').join('');
+  if (aiBusy) {} else if (Swap.ai && Swap.procMode === 'ai') { tips.hidden = false; tips.innerHTML = analHTML(Swap.ai); } else tips.hidden = true;
+  const olist = $('#procSteps');
+  olist.innerHTML = steps.map((st, k) => '<li><button type="button" class="pstep" data-step="' + k + '" aria-pressed="' + (Swap.view === 'step' && Swap.step === k) + '"><canvas width="10" height="10"></canvas><span class="n">第 ' + (k + 1) + ' 步</span><b>' + esc(st.t) + '</b>' + (st.tool || st.wait ? '<span class="sbadges">' + (st.tool ? '<i>' + esc(st.tool) + '</i>' : '') + (st.wait ? '<i class="w">画完等干</i>' : '') + '</span>' : '') + '<span class="penstrip">' + st.nos.map(n => penHTML(penByNo(n), 'mini')).join('') + '</span><p>' + esc(st.d) + '</p></button></li>').join('');
   const W = r.W, H = r.H, sc = Math.max(1, Math.floor(W / 240)), lab = r.labels, LN = r.lines;
   const col = Swap.map.map(m => { const p = m.no ? penByNo(m.no) : null; return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
-  const lk = Swap.lineOn ? .9 / 255 : 0;
+  const lk = Swap.lineOn ? .9 / 255 : 0, ol = outlineData().lab;
   steps.forEach((st, k) => {
-    const cv = ol.querySelectorAll('canvas')[k]; cv.width = Math.ceil(W / sc); cv.height = Math.ceil(H / sc);
+    const cv = olist.querySelectorAll('canvas')[k]; cv.width = Math.ceil(W / sc); cv.height = Math.ceil(H / sc);
     const x = cv.getContext('2d'), im = x.createImageData(cv.width, cv.height), d = im.data;
     for (let y = 0; y < cv.height; y++) for (let xx = 0; xx < cv.width; xx++) {
-      const i = Math.min(H - 1, y * sc) * W + Math.min(W - 1, xx * sc), on = so[i] <= k, c = on ? col[lab[i]] : [251, 250, 246], a = on ? LN[i] * lk : LN[i] / 255 * .5, o = (y * cv.width + xx) * 4;
+      const yy = Math.min(H - 1, y * sc), xs = Math.min(W - 1, xx * sc), i = yy * W + xs, on = so[i] <= k, c = on ? col[lab[i]] : [251, 250, 246], o = (y * cv.width + xx) * 4;
+      const e = !on && ((xs + sc < W && ol[i + sc] !== ol[i]) || (yy + sc < H && ol[i + sc * W] !== ol[i]));
+      const a = on ? LN[i] * lk : e ? .55 : 0;
       d[o] = c[0] + (36 - c[0]) * a; d[o + 1] = c[1] + (38 - c[1]) * a; d[o + 2] = c[2] + (50 - c[2]) * a; d[o + 3] = 255;
     }
     x.putImageData(im, 0, 0);
@@ -1714,47 +1769,60 @@ function onShare() {
 $('#shareIn').addEventListener('input', onShare);
 
 /* ================= Claude 排步骤 ================= */
-let planAbort = null;
-$('#aiPlan').addEventListener('click', async () => {
-  if (!sampleFn || !Swap.work) return;
-  const btn = $('#aiPlan'), tips = $('#procTips');
+let planAbort = null, aiBusy = false;
+function analHTML(a) {
+  const A = a.analysis || {}, keys = ['构图', '光源', '配色', '难点'].filter(k => A[k]);
+  return '<div class="anal">' + (a.look ? '<p class="look">' + esc(a.look) + '</p>' : '') +
+    (keys.length ? '<dl class="anal-grid">' + keys.map(k => '<div><dt>' + k + '</dt><dd>' + esc(A[k]) + '</dd></div>').join('') + '</dl>' : '') +
+    (a.prep ? '<p class="prep"><b>起稿</b>' + esc(a.prep) + '</p>' : '') +
+    (a.tips && a.tips.length ? '<ul class="tips">' + a.tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '') + '</div>';
+}
+$('#aiPlan').addEventListener('click', () => runAi());
+async function runAi(auto) {
+  if (!sampleFn || aiOff || !imgCaps || !Swap.work || aiBusy) return;
+  const btn = $('#aiPlan'), tips = $('#procTips'), forItem = Swap.itemId;
   if (planAbort) planAbort.abort();
-  planAbort = new AbortController();
-  btn.disabled = true; tips.hidden = false; tips.innerHTML = '<p class="thinking">Claude 正在看图，排先画哪、后画哪…</p><button class="btn small quiet" type="button" id="planStop">停</button>';
+  planAbort = new AbortController(); aiBusy = true;
+  btn.disabled = true; tips.hidden = false; tips.innerHTML = '<p class="thinking">Claude 正在拆解这张画：构图、光源、配色，再排先画哪、后画哪（大概半分钟到一分钟）…</p><button class="btn small quiet" type="button" id="planStop">停</button>';
   $('#planStop').onclick = () => planAbort && planAbort.abort();
   const avail = Store.pens.filter(p => p.st !== 'out').map(p => p.no + ' ' + (p.name || '') + ' ' + p.hex).join('\n');
   const used = swapPens().map(p => { const pen = penByNo(p.no); return p.no + ' ' + (pen ? pen.name : '') + ' 占' + Math.round(p.share * 100) + '% 原图颜色' + p.src; }).join('\n');
   const what = Swap.kind === 'photo' ? '一张我自己拍的照片，我想把它画成一幅丙烯马克笔画' : '别人画的一幅丙烯马克笔画，我想用我自己的笔临摹';
   const prompt = '你是丙烯马克笔绘画老师，回答用简体中文。图片是' + what + '。\n\n我手上有的笔（色号 名字 色值）：\n' + avail + '\n\n程序已经把画面颜色对应到我的笔（色号 名字 占比 原图颜色）：\n' + used +
-    '\n\n请像小红书「附过程」的帖子那样，按画面里的具体部位告诉我先画哪里、后画哪里（比如：先铺天空 → 远山 → 云的暗面 → 云的亮面 → 海面 → 船和人 → 倒影 → 高光）。一般是先背景后主体、先大面积后小细节、先浅后深（大的深色剪影可以早一点）、勾线和高光最后。\n' +
-    '每一步写清楚：画哪个部位、在画面哪里、用哪几支笔（优先用上面已经对应好的色号，也可以用我手上有的其他色号）、怎么画（笔法、叠色、留白、等干）。再给这个部位在图里的大致范围 box=[左,上,右,下]，都是 0 到 1 的比例。\n' +
-    '只返回 JSON：{"look":"一句话说这幅画的特点和难点","steps":[{"title":"部位，不超过8个字","where":"在画面哪里","box":[0,0,1,0.4],"pens":["色号"],"how":"一两句怎么画"}],"tips":["最多3条注意事项"]}。steps 5 到 9 步。';
+    '\n\n请你像一位有十年经验、专门教丙烯马克笔的插画老师那样，把这张画专业地拆解给我，然后写一份像小红书「附过程」那样细的临摹步骤。\n' +
+    '拆解要说到点子上：构图（视觉中心在哪、画面怎么分层：远/中/近）、光源（从哪边来、亮面暗面投影在哪）、配色（主色、辅助色、点缀色，冷暖关系）、难点（最容易画坏的地方和怎么处理）。\n' +
+    '起稿：告诉我只需要先轻轻勾哪几条大轮廓（不超过 5 条，说清楚位置），哪些细节不用起稿、直接画。\n' +
+    '步骤：按真实画法排，先画哪个部位、后画哪个部位，一般是先背景后主体、先大面积后小细节、先浅后深（大的深色剪影可以早一点）、亮部高光最后。每一步只画一个部位或一层颜色，写清楚：画哪个部位、在画面哪里、用哪几支笔（优先用上面已经对应好的色号，也可以用我手上有的其他色号）、用什么笔头和笔法（粗头平涂 / 中头 / 细头 / 点涂 / 勾线 / 叠色 / 留白）、方向和力度、要不要等干。再给这个部位在图里的大致范围 box=[左,上,右,下]，都是 0 到 1 的比例。\n' +
+    '只返回 JSON：{"look":"一句话说这幅画好看在哪","analysis":{"构图":"…","光源":"…","配色":"…","难点":"…"},"prep":"起稿建议","steps":[{"title":"部位，不超过10个字","where":"在画面哪里","box":[0,0,1,0.4],"pens":["色号"],"tool":"粗头平涂/中头/细头/点涂/勾线/叠色","how":"2到3句，具体怎么画","wait":true}],"tips":["最多5条"]}。steps 8 到 14 步。';
   try {
     const blob = await toBlob(toCanvas(Swap.work, 1100), .85);
-    const res = await sampleFn.json(prompt, {images: [blob], signal: planAbort.signal, modelTier: 'default'});
+    const res = await sampleFn.json(prompt, {images: [blob], signal: planAbort.signal, modelTier: 'complex'});
     const plan = cleanAi(res);
     if (!plan) throw {code: 'invalid_json'};
-    Swap.ai = plan; Swap.procMode = 'ai';
-    const it = Swap.itemId && Store.items.get(Swap.itemId);
+    const it = forItem && Store.items.get(forItem);
     if (it) { it.plan2 = plan; saveItem(it); }
-    renderSteps(); if (Swap.view === 'step') render();
-    toast('排好了：' + plan.steps.length + ' 步。点每一步看画到哪。');
+    aiBusy = false;
+    if (Swap.itemId === forItem) { Swap.ai = plan; Swap.procMode = 'ai'; renderSteps(); if (Swap.view === 'step') render(); }
+    if (!auto) toast('拆解好了：' + plan.steps.length + ' 步。点每一步看画到哪。');
   } catch (e) {
+    aiBusy = false;
     if (e && e.code === 'cancelled') { renderSteps(); }
     else { tips.hidden = false; tips.innerHTML = '<p class="ai-err">' + esc(aiErr(e)) + '</p>'; }
   }
-  btn.disabled = false;
-});
+  aiBusy = false; btn.disabled = false;
+}
 function cleanAi(r) {
   if (!r || !Array.isArray(r.steps) || !r.steps.length) return null;
-  const ok = new Set(Store.pens.map(p => p.no)), num = v => Math.max(0, Math.min(1, +v || 0));
-  const steps = r.steps.slice(0, 10).map(s => {
+  const ok = new Set(Store.pens.map(p => p.no)), num = v => Math.max(0, Math.min(1, +v || 0)), str = (v, n) => String(v == null ? '' : v).slice(0, n);
+  const steps = r.steps.slice(0, 16).map(s => {
     let b = Array.isArray(s.box) && s.box.length === 4 ? s.box.map(num) : null;
     if (b && (b[2] <= b[0] || b[3] <= b[1])) b = null;
-    return {title: String(s.title || '').slice(0, 20), where: String(s.where || '').slice(0, 60), box: b, pens: (Array.isArray(s.pens) ? s.pens : []).map(v => String(v).trim()).filter(n => ok.has(n)).slice(0, 8), how: String(s.how || '').slice(0, 300)};
+    return {title: str(s.title, 24), where: str(s.where, 80), box: b, pens: (Array.isArray(s.pens) ? s.pens : []).map(v => String(v).trim()).filter(n => ok.has(n)).slice(0, 8), tool: str(s.tool, 16), how: str(s.how, 400), wait: !!s.wait};
   }).filter(s => s.title);
   if (!steps.length) return null;
-  return {look: String(r.look || '').slice(0, 200), steps, tips: (Array.isArray(r.tips) ? r.tips : []).slice(0, 3).map(t => String(t).slice(0, 200))};
+  const A = r.analysis && typeof r.analysis === 'object' ? r.analysis : {}, analysis = {};
+  ['构图', '光源', '配色', '难点'].forEach(k => { if (A[k]) analysis[k] = str(A[k], 300); });
+  return {look: str(r.look, 200), analysis, prep: str(r.prep, 300), steps, tips: (Array.isArray(r.tips) ? r.tips : []).slice(0, 5).map(t => str(t, 200))};
 }
 
 /* ================= 裁剪 ================= */
@@ -1806,7 +1874,7 @@ function drawPaint() {
   const steps = Swap.cache.steps || [], st = steps[Paint.k]; if (!st) return;
   render($('#ptCv'), Paint.view === 'step' ? 'step' : Paint.view, Paint.k);
   $('#ptN').textContent = '第 ' + (Paint.k + 1) + ' / ' + steps.length + ' 步';
-  $('#ptT').textContent = st.t; $('#ptD').textContent = st.d;
+  $('#ptT').textContent = st.t; $('#ptD').textContent = (st.tool ? '【' + st.tool + '】' : '') + st.d + (st.wait ? ' 画完等干透再进行下一步。' : '');
   $('#ptPens').innerHTML = st.nos.map(n => { const p = penByNo(n), on = Paint.ticked.has(n); return '<li><button type="button" class="pt-pen" data-tick="' + esc(n) + '" aria-pressed="' + on + '">' + penHTML(p) + '<span><b>' + esc(p ? (p.name || p.no) : n) + '</b><small>' + (on ? '涂好了' : '涂好了点一下') + '</small></span></button></li>'; }).join('');
   $('#ptPrev').disabled = Paint.k === 0;
   const last = Paint.k === steps.length - 1;
@@ -2074,6 +2142,7 @@ async function openInSwap(it) {
     Swap.split = .5; Swap.view = 'compare';
     await setWork(img, {itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', style: it.style || '', ai: it.plan2 || null, title: it.title, n: it.n, detail: it.detail, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
     setView('compare');
+    if (!it.plan2) runAi(true);
   } catch (e) { toast('图打不开了。'); }
 }
 function fromSwap(kind) {

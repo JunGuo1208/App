@@ -3,27 +3,28 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Courier+Prime:wght@400;700&display=swap">
 <style>
-/* Layout: 方眼本桌面上的一本马克笔画画手账。换色 = 左边原图/画稿，右边「要用的笔」清单；想画 = 贴了胶带的参考图卡片；画过 = 拍立得墙；我的笔 = 手绘色卡。
+/* 配色取自你收藏的那几张：钴蓝（宝蓝 B028 一类）做主色，奶白纸面，珊瑚红做印章和提醒。
+   Layout: 方眼本桌面上的一本马克笔画画手账。换色 = 左边原图/画稿，右边「要用的笔」清单；想画 = 贴了胶带的参考图卡片；画过 = 拍立得墙；我的笔 = 手绘色卡。
    材料家族与「如影跟读台」「临池练字台」「游刃拆招台」相同：剪纸卡片（纸色 + 白切边 + 投影，不描边）、和纸胶带标题、朱印、翻页数字。
    本台专属：每个色块都是马克笔涂出来的色卡格（不规则边 + 笔触纹），色号写在笔杆标签上；主按钮是黑色笔杆。 */
 :root{
-  --desk:#EAE8EE;
-  --grid:rgba(98,80,140,.10);
+  --desk:#E8ECF2;
+  --grid:rgba(40,80,170,.09);
   --paper:#FFFFFF;
-  --paper-2:#F4F3F6;
+  --paper-2:#F1F3F8;
   --cut:#FFFFFF;
-  --ink:#22232B;
-  --ink-2:#4E4F5C;
-  --ink-3:#8A8A97;
-  --rule:rgba(34,35,43,.10);
-  --barrel:#24252C;
+  --ink:#1F2433;
+  --ink-2:#4A5163;
+  --ink-3:#858C9C;
+  --rule:rgba(31,36,51,.10);
+  --barrel:#1E4FAE;
   --barrel-ink:#FFFFFF;
   --shu:#D2452F;
   --shu-soft:rgba(210,69,47,.08);
   --seal-ink:#FFF5EC;
   --marker:rgba(255,206,64,.62);
-  --tape-a:rgba(240,150,170,.85);
-  --tape-b:rgba(120,190,200,.85);
+  --tape-a:rgba(242,140,128,.85);
+  --tape-b:rgba(120,170,228,.85);
   --tape-c:rgba(250,200,90,.88);
   --tape-ink:#2B2522;
   --flap:#2B2C33;
@@ -43,12 +44,12 @@
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --desk:#18161D; --grid:rgba(190,170,230,.06); --paper:#25232C; --paper-2:#2D2B35; --cut:#D8D3DD;
-    --ink:#ECE9F0; --ink-2:#B9B6C2; --ink-3:#8A8796; --rule:rgba(236,233,240,.10);
-    --barrel:#ECE9F0; --barrel-ink:#1C1B22;
+    --desk:#121722; --grid:rgba(140,170,230,.06); --paper:#1E2430; --paper-2:#262D3B; --cut:#D3D8E2;
+    --ink:#E9ECF2; --ink-2:#B4BBC9; --ink-3:#8790A0; --rule:rgba(233,236,242,.10);
+    --barrel:#8FB2F2; --barrel-ink:#0F1730;
     --shu:#EE7C64; --shu-soft:rgba(238,124,100,.12); --seal-ink:#1B0F0B;
     --marker:rgba(230,190,60,.32);
-    --tape-a:rgba(200,110,135,.82); --tape-b:rgba(80,145,155,.85); --tape-c:rgba(190,150,60,.88); --tape-ink:#F7F2EA;
+    --tape-a:rgba(200,105,95,.82); --tape-b:rgba(70,115,185,.85); --tape-c:rgba(190,150,60,.88); --tape-ink:#F7F2EA;
     --flap:#0F0E13; --flap-ink:#E8E4DA;
     --good:#5DBB8F; --good-soft:rgba(93,187,143,.14); --warn:#D9A44A; --warn-soft:rgba(217,164,74,.15); --bad:#EC7A63; --bad-soft:rgba(236,122,99,.14);
     --lift:0 1px 2px rgba(0,0,0,.35),0 8px 20px rgba(0,0,0,.30); --lift-hi:0 2px 4px rgba(0,0,0,.4),0 16px 34px rgba(0,0,0,.42);
@@ -56,12 +57,12 @@
   }
 }
 :root[data-theme="dark"]{
-  --desk:#18161D; --grid:rgba(190,170,230,.06); --paper:#25232C; --paper-2:#2D2B35; --cut:#D8D3DD;
-  --ink:#ECE9F0; --ink-2:#B9B6C2; --ink-3:#8A8796; --rule:rgba(236,233,240,.10);
-  --barrel:#ECE9F0; --barrel-ink:#1C1B22;
+  --desk:#121722; --grid:rgba(140,170,230,.06); --paper:#1E2430; --paper-2:#262D3B; --cut:#D3D8E2;
+  --ink:#E9ECF2; --ink-2:#B4BBC9; --ink-3:#8790A0; --rule:rgba(233,236,242,.10);
+  --barrel:#8FB2F2; --barrel-ink:#0F1730;
   --shu:#EE7C64; --shu-soft:rgba(238,124,100,.12); --seal-ink:#1B0F0B;
   --marker:rgba(230,190,60,.32);
-  --tape-a:rgba(200,110,135,.82); --tape-b:rgba(80,145,155,.85); --tape-c:rgba(190,150,60,.88); --tape-ink:#F7F2EA;
+  --tape-a:rgba(200,105,95,.82); --tape-b:rgba(70,115,185,.85); --tape-c:rgba(190,150,60,.88); --tape-ink:#F7F2EA;
   --flap:#0F0E13; --flap-ink:#E8E4DA;
   --good:#5DBB8F; --good-soft:rgba(93,187,143,.14); --warn:#D9A44A; --warn-soft:rgba(217,164,74,.15); --bad:#EC7A63; --bad-soft:rgba(236,122,99,.14);
   --lift:0 1px 2px rgba(0,0,0,.35),0 8px 20px rgba(0,0,0,.30); --lift-hi:0 2px 4px rgba(0,0,0,.4),0 16px 34px rgba(0,0,0,.42);
@@ -141,7 +142,7 @@ h1,h2,h3,h4{text-wrap:balance}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;background:var(--paper);border-radius:8px;padding:8px 15px;font-size:14px;cursor:pointer;white-space:nowrap;line-height:1.35;text-decoration:none;color:var(--ink);box-shadow:0 0 0 1px var(--rule),0 2px 0 rgba(40,30,60,.10)}
 .btn:hover{box-shadow:0 0 0 1px var(--ink-3),0 2px 0 rgba(40,30,60,.12)}
 .btn:active{transform:translateY(1px);box-shadow:0 0 0 1px var(--rule)}
-.btn.primary{background:var(--barrel);color:var(--barrel-ink);box-shadow:0 0 0 2px var(--cut),0 2px 0 rgba(20,20,30,.25)}
+.btn.primary{background:var(--barrel);color:var(--barrel-ink);box-shadow:0 0 0 2px var(--cut),0 2px 0 rgba(15,30,80,.28)}
 .btn.primary:hover{filter:brightness(1.15)}
 .btn.shu{background:var(--shu);color:#fff;box-shadow:0 0 0 2px var(--cut),0 2px 0 rgba(60,20,10,.25)}
 .btn.small{padding:5px 11px;font-size:13px}
@@ -279,12 +280,56 @@ input[type=color]{width:44px;height:40px;border:0;padding:0;background:none;curs
 .toppens .penstrip .pen{position:relative}
 .toppens .penstrip i{position:absolute;right:-6px;top:-7px;font-style:normal;font-size:10px;font-family:var(--f-type);font-weight:700;background:var(--shu);color:#fff;border-radius:3px;padding:0 4px;line-height:15px;box-shadow:0 0 0 1.5px var(--cut)}
 
+/* 调整（折叠） */
+.adj{background:var(--paper-2);border-radius:8px;padding:0 12px}
+.adj>summary{list-style:none;cursor:pointer;padding:9px 0;display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--ink-2)}
+.adj>summary::-webkit-details-marker{display:none}
+.adj>summary b{color:var(--ink);font-weight:600}
+.adj>summary::after{content:"展开";font-size:12px;color:var(--ink-3)}
+.adj[open]>summary::after{content:"收起"}
+.adj>div{display:flex;flex-direction:column;gap:12px;padding:2px 0 14px}
+.icard .noimg.wait{display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;text-align:center;padding:10px;background:repeating-linear-gradient(135deg,var(--paper-2) 0 10px,transparent 10px 20px),var(--paper);box-shadow:inset 0 0 0 1.5px var(--rule)}
+.icard .noimg.wait b{font-family:var(--f-disp);font-weight:400;font-size:18px;color:var(--ink)}
+.shareBulk{display:flex;flex-direction:column;gap:8px;grid-column:1/-1}
+.next.drawn .seal-stamp{background:var(--barrel);box-shadow:inset 0 0 0 2px var(--barrel),inset 0 0 0 3.5px var(--barrel-ink),0 0 0 2px var(--cut);color:var(--barrel-ink)}
+/* 开画模式 */
+dialog.paint{width:min(1100px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
+.pt{padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px}
+.pt-head{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap}
+.pt-head h2{margin:4px 0 0;font-size:18px;font-weight:600;line-height:1.3}
+.pt-timer{display:flex;align-items:center;gap:10px;margin-left:auto}
+.pt-timer .flap{font-size:24px}
+.pt-body{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+.pt-img{display:flex;flex-direction:column;gap:10px;align-items:center;min-width:0}
+#ptCv{display:block;max-width:100%;max-height:64vh;width:auto;height:auto;border-radius:4px;box-shadow:0 0 0 3px var(--cut),var(--lift);background:#fff}
+.pt-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.pt-step .n{font-family:var(--f-disp);color:var(--shu);font-size:15px}
+.pt-step h3{margin:2px 0 4px;font-size:22px;font-weight:600}
+.pt-step p{margin:0;font-size:14px;color:var(--ink-2)}
+.pt-pens{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.pt-pen{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;border:0;background:var(--paper-2);border-radius:8px;padding:8px 12px 8px 8px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.pt-pen span{display:flex;flex-direction:column;min-width:0}
+.pt-pen small{font-size:12px;color:var(--ink-3)}
+.pt-pen::after{content:"";width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--ink-3)}
+.pt-pen[aria-pressed=true]{background:var(--good-soft)}
+.pt-pen[aria-pressed=true]::after{content:"✓";display:grid;place-items:center;background:var(--good);color:#fff;box-shadow:none;font-size:13px;font-weight:700}
+.pt-pen[aria-pressed=true] b{text-decoration:line-through;text-decoration-color:var(--good)}
+.pt-nav{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:760px){
+  dialog.paint{width:100%;max-height:100vh;height:100%;margin:0;border-radius:0}
+  .pt{padding:12px 14px calc(16px + env(safe-area-inset-bottom,0px))}
+  .pt-body{grid-template-columns:1fr}
+  #ptCv{max-height:46vh}
+  .pt-timer .flap{font-size:20px}
+}
+
 /* 上色过程 */
 .proc{margin-top:24px;padding:18px;display:flex;flex-direction:column;gap:14px}
 .proc-head{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap}
 .proc-head h3{margin:0;font-family:var(--f-disp);font-weight:400;font-size:20px}
-.proc-head .btn{margin-left:auto}
+.proc-head .btn:first-of-type{margin-left:auto}
 .proc-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+@media (max-width:760px){.proc-steps{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(150px,46%);overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}.proc-steps li{scroll-snap-align:start}.proc{padding:14px}}
 .pstep{display:flex;flex-direction:column;gap:8px;min-width:0;border:0;background:var(--paper-2);border-radius:8px;padding:10px;text-align:left;font:inherit;color:inherit;cursor:pointer;width:100%}
 .pstep[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
 .pstep canvas{display:block;width:100%;height:auto;border-radius:3px;box-shadow:0 0 0 2px var(--cut),0 1px 3px rgba(0,0,0,.15)}
@@ -486,6 +531,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
             <h3>要用的笔</h3>
             <span><span class="flap" id="penCount"></span> <span class="hint" style="display:inline">支</span></span>
           </div>
+          <details class="adj" id="adj"><summary><span>调整</span><b id="adjSum">10 色 · 简化 1 · 原色</b></summary><div>
           <div class="ctl"><label for="nIn">颜色数</label><input type="range" id="nIn" min="4" max="24" value="10"><output id="nOut" for="nIn">10</output></div>
           <div class="ctl" id="detailCtl"><label for="detIn">简化</label><input type="range" id="detIn" min="0" max="4" value="1"><output id="detOut" for="detIn">1</output></div>
           <div class="style-row"><span class="label">风格</span>
@@ -499,6 +545,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
             <p class="hint" id="styleHint">原色：在全部笔里找最接近的。选一个风格，就只用那一组笔，照片会变成平涂插画的感觉。</p>
           </div>
           <label class="check"><input type="checkbox" id="onlyHave" checked> 只用手上有的笔（不算「没了」的）</label>
+          </div></details>
           <ul class="plist" id="plist"></ul>
           <div class="side-acts">
             <button class="btn primary" type="button" id="saveWant">存进「想画」</button>
@@ -509,7 +556,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
       </aside>
     </div>
     <section class="proc paper" id="procOut" hidden>
-      <div class="proc-head"><h3>上色过程</h3><span class="hint">按这个顺序画。点一步，上面就显示画到这一步的样子。</span><button class="btn small" type="button" id="aiPlan" hidden>让 Claude 细讲每一步</button></div>
+      <div class="proc-head"><h3>上色过程</h3><span class="hint">按这个顺序画。点一步，上面就显示画到这一步的样子。</span><button class="btn small" type="button" id="aiPlan" hidden>让 Claude 细讲每一步</button><button class="btn small primary" type="button" id="paintGo">开始画（一步步来）</button></div>
       <ol class="proc-steps" id="procSteps"></ol>
     </section>
     <div class="plan paper" id="planOut" hidden></div>
@@ -527,11 +574,17 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
         <small id="bulkMsg">可以多选</small>
       </div>
       <div class="xhs" id="xhsLinks"></div>
+      <div class="shareBulk">
+        <label class="label" for="shareBulk">只有链接也行：把小红书「复制链接」的文字贴进来（可以一次贴好几条），先存成「待补图」卡片，有空再补图</label>
+        <textarea id="shareBulk" rows="3" placeholder="39 【SALTED FISH 🐟 - oO圈圈Oo🌻 | 小红书 - 你的生活兴趣社区】 😆 … 😆 https://www.xiaohongshu.com/…"></textarea>
+        <div class="row"><button class="btn" type="button" id="shareSave">按链接先存起来</button><span class="hint" id="shareMsg"></span></div>
+      </div>
     </div>
     <input type="file" id="bulkIn" accept="image/*" multiple hidden>
     <div class="seedcard paper taped" id="seedCard" style="--tp:var(--tape-b)" hidden>
-      <h3>你发给我的 4 张</h3>
+      <h3>你发给我的</h3>
       <div class="seedthumbs" id="seedThumbs"></div>
+      <p class="hint" id="seedLinks"></p>
       <div class="row"><button class="btn primary" type="button" id="seedAdd">全部加进「想画」</button><button class="btn quiet" type="button" id="seedOff">不用了</button><span class="hint" id="seedMsg"></span></div>
     </div>
     <div id="nextBox"></div>
@@ -542,6 +595,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           <button type="button" data-wsort="love" aria-pressed="true">最想画</button>
           <button type="button" data-wsort="new" aria-pressed="false">最新存的</button>
         </div>
+        <button class="btn" type="button" id="wantDraw">不知道画啥？抽一张</button>
       </div>
       <div class="find-row">
         <label class="check"><input type="checkbox" id="wantHave"> 只看笔都在的</label>
@@ -634,6 +688,34 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
   </form>
 </dialog>
 
+<!-- 开画 -->
+<dialog id="dlgPaint" class="paint" aria-labelledby="paintH">
+  <div class="pt">
+    <div class="pt-head">
+      <div style="min-width:0"><span class="washi sm b">开画</span><h2 id="paintH"></h2></div>
+      <div class="pt-timer"><span class="flap" id="ptTime"></span><button class="btn small" type="button" id="ptToggle">开始计时</button></div>
+      <button class="x" type="button" data-close aria-label="关闭">×</button>
+    </div>
+    <div class="pt-body">
+      <div class="pt-img">
+        <canvas id="ptCv" width="10" height="10" aria-label="当前这一步画完的样子"></canvas>
+        <div class="pills" role="group" aria-label="看哪一种" id="ptView">
+          <button type="button" data-pv="step" aria-pressed="true">画到这一步</button>
+          <button type="button" data-pv="orig" aria-pressed="false">原图</button>
+          <button type="button" data-pv="sketch" aria-pressed="false">画稿</button>
+        </div>
+      </div>
+      <div class="pt-side">
+        <div class="pt-step"><span class="n" id="ptN"></span><h3 id="ptT"></h3><p id="ptD"></p></div>
+        <ul class="pt-pens" id="ptPens"></ul>
+        <div class="pt-nav"><button class="btn" type="button" id="ptPrev">上一步</button><button class="btn primary" type="button" id="ptNext">下一步</button></div>
+        <button class="btn shu" type="button" id="ptDone">画完了，记一笔</button>
+        <p class="hint">计时会记进「画过」。开着计时的时候，手机屏幕尽量不自动熄灭。</p>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <!-- 笔 -->
 <dialog id="dlgPen" aria-labelledby="penH">
   <form class="dlg" method="dialog" id="penForm">
@@ -649,6 +731,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
         <div class="row"><span class="label">状态</span><div class="pills" role="group" aria-label="状态" id="pSt">
           <button type="button" data-st="ok" aria-pressed="true">有</button><button type="button" data-st="low" aria-pressed="false">快没水</button><button type="button" data-st="out" aria-pressed="false">没了</button></div></div>
         <p class="hint" id="pUse"></p>
+        <button class="btn small" type="button" id="pFind" hidden>看想画里用到这支的</button>
       </div>
     </div>
     <div class="confirm" id="pDelConfirm" hidden><span>从色卡里删掉这支？</span><button class="btn small danger" type="button" id="pDelYes">删掉</button><button class="btn small quiet" type="button" id="pDelNo">不删</button></div>
@@ -1209,11 +1292,13 @@ function setKind(k, silent) {
     if (Swap.work && !Swap.demo && Swap.kind !== 'gen') runAnalyze();
   }
 }
+function adjSum() { const el = $('#adjSum'); if (el) el.textContent = Swap.n + ' 色 · 简化 ' + Swap.detail + ' · ' + (Swap.style ? MOODS[Swap.style].name : '原色'); }
 function setStyle(st, silent) {
   Swap.style = st || '';
   Swap.styleSet = st && MOODS[st] ? moodPens(st).nos : null;
   $$('#styleP [data-style]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.style === Swap.style)));
   $('#styleHint').textContent = Swap.style ? MOODS[Swap.style].name + '：只用这 ' + Swap.styleSet.size + ' 支笔（' + Array.from(Swap.styleSet).join('、') + '）。' : '原色：在全部笔里找最接近的。选一个风格，就只用那一组笔，照片会变成平涂插画的感觉。';
+  adjSum();
   if (!silent) { Swap.styleUser = true; Swap.cache = {marks: Swap.cache.marks}; Swap.rematch(); }
 }
 $$('#styleP [data-style]').forEach(b => b.addEventListener('click', () => setStyle(b.dataset.style)));
@@ -1237,7 +1322,7 @@ async function runAnalyze() {
   Swap.cache = {};
   Swap.match();
   $('#busy').hidden = true;
-  render(); renderSwapList();
+  render(); renderSwapList(); adjSum();
 }
 Swap.match = function () {
   const r = this.res; if (!r) return;
@@ -1265,14 +1350,14 @@ function swapPens() { return groups().map(e => ({no: e.no, share: Math.round(e.s
 
 /* ================= 渲染画布 ================= */
 function penForLabel(i) { const m = Swap.map[i]; return m && m.no ? penByNo(m.no) : null; }
-function render() {
-  const cv = $('#swapCv'), r = Swap.res; if (!r) return;
-  const view = Swap.view;
+function render(cv, view, step) {
+  cv = cv || $('#swapCv'); view = view || Swap.view; step = step == null ? Swap.step : step;
+  const main = cv.id === 'swapCv', r = Swap.res; if (!r) return;
   const W = r.W, H = r.H;
   if (view === 'orig') {
     cv.width = Swap.work.width; cv.height = Swap.work.height;
     cv.getContext('2d').drawImage(Swap.work, 0, 0);
-    fitCanvas();
+    if (main) fitCanvas();
     return;
   }
   cv.width = W; cv.height = H;
@@ -1280,7 +1365,7 @@ function render() {
   const col = Swap.map.map((m, i) => { const p = penForLabel(i); return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
   if (view === 'step') {
     const steps = Swap.cache.steps || [], vis = new Set();
-    steps.slice(0, Swap.step + 1).forEach(st => st.nos.forEach(n => vis.add(n)));
+    steps.slice(0, step + 1).forEach(st => st.nos.forEach(n => vis.add(n)));
     for (let i = 0; i < W * H; i++) {
       const v = lab[i], m = Swap.map[v], on = m && m.no && vis.has(m.no);
       let c = on ? col[v] : [251, 250, 246];
@@ -1288,13 +1373,13 @@ function render() {
       d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255;
     }
     x.putImageData(im, 0, 0);
-    fitCanvas();
+    if (main) fitCanvas();
     return;
   }
   if (view === 'pens') {
     for (let i = 0; i < W * H; i++) { const c = col[lab[i]]; d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255; }
     x.putImageData(im, 0, 0);
-    fitCanvas();
+    if (main) fitCanvas();
     return;
   }
   // 画稿：白纸 + 区块边线 + 每块写色号（像数字油画）
@@ -1314,7 +1399,7 @@ function render() {
     x.font = '700 ' + fs + 'px "Courier Prime", ui-monospace, monospace';
     x.fillText(p.no, m.x, m.y);
   });
-  fitCanvas();
+  if (main) fitCanvas();
 }
 function fitCanvas() {
   const cv = $('#swapCv'), host = $('#cvWrap').parentElement; if (!host || !host.clientWidth) return;
@@ -1511,7 +1596,7 @@ function parseShare(t) {
   t = String(t || '').trim(); if (!t) return null;
   const url = (t.match(/https?:\/\/[^\s😆]+/) || [])[0] || '';
   let inner = (t.match(/【([^】]+)】/) || [])[1] || '';
-  inner = inner.split(/\s*\|\s*/)[0];
+  inner = inner.replace(/\s*\|\s*小红书[\s\S]*$/, '').trim();
   let title = inner, author = '';
   const k = inner.lastIndexOf(' - ');
   if (k > 0) { title = inner.slice(0, k).trim(); author = inner.slice(k + 3).trim(); }
@@ -1569,8 +1654,67 @@ function renderPlan(p) {
     (p.tips.length ? '<ul class="tips">' + p.tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '');
 }
 
+/* ================= 开画模式 ================= */
+const Paint = {k: 0, view: 'step', ms: 0, t0: 0, run: false, iv: 0, ticked: new Set(), lock: null, key: null};
+function openPaint() {
+  if (!Swap.res) return;
+  if (!Swap.cache.steps) Swap.cache.steps = procSteps();
+  const key = Swap.itemId || $('#srcTitle').textContent;
+  if (Paint.key !== key) { Paint.key = key; Paint.k = 0; Paint.ms = 0; Paint.ticked = new Set(); }
+  $('#paintH').textContent = $('#srcTitle').textContent;
+  if (!$('#dlgPaint').open) $('#dlgPaint').showModal();
+  drawPaint(); tickTime();
+}
+function drawPaint() {
+  const steps = Swap.cache.steps || [], st = steps[Paint.k]; if (!st) return;
+  render($('#ptCv'), Paint.view === 'step' ? 'step' : Paint.view, Paint.k);
+  $('#ptN').textContent = '第 ' + (Paint.k + 1) + ' / ' + steps.length + ' 步';
+  $('#ptT').textContent = st.t; $('#ptD').textContent = st.d;
+  $('#ptPens').innerHTML = st.nos.map(n => { const p = penByNo(n), on = Paint.ticked.has(n); return '<li><button type="button" class="pt-pen" data-tick="' + esc(n) + '" aria-pressed="' + on + '">' + penHTML(p) + '<span><b>' + esc(p ? (p.name || p.no) : n) + '</b><small>' + (on ? '涂好了' : '涂好了点一下') + '</small></span></button></li>'; }).join('');
+  $('#ptPrev').disabled = Paint.k === 0;
+  const last = Paint.k === steps.length - 1;
+  $('#ptNext').disabled = last; $('#ptNext').textContent = last ? '已经是最后一步' : '下一步';
+  $$('#ptView [data-pv]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pv === Paint.view)));
+}
+function elapsed() { return Paint.ms + (Paint.run ? Date.now() - Paint.t0 : 0); }
+function tickTime() {
+  const sec = Math.floor(elapsed() / 1000), m = Math.floor(sec / 60), txt = String(m).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+  $('#ptTime').innerHTML = txt.split('').map(c => c === ':' ? '<i>:</i>' : '<b>' + c + '</b>').join('');
+  $('#ptToggle').textContent = Paint.run ? '暂停' : (Paint.ms ? '继续计时' : '开始计时');
+}
+async function wake(on) {
+  try {
+    if (on && navigator.wakeLock && !Paint.lock) Paint.lock = await navigator.wakeLock.request('screen');
+    if (!on && Paint.lock) { await Paint.lock.release(); Paint.lock = null; }
+  } catch (e) { Paint.lock = null; }
+}
+function pauseTimer() { if (!Paint.run) return; Paint.ms += Date.now() - Paint.t0; Paint.run = false; clearInterval(Paint.iv); wake(false); tickTime(); }
+function startTimer() { if (Paint.run) return; Paint.t0 = Date.now(); Paint.run = true; Paint.iv = setInterval(tickTime, 1000); wake(true); tickTime(); }
+$('#ptToggle').addEventListener('click', () => Paint.run ? pauseTimer() : startTimer());
+$('#ptPrev').addEventListener('click', () => { if (Paint.k > 0) { Paint.k--; drawPaint(); } });
+$('#ptNext').addEventListener('click', () => { const n = (Swap.cache.steps || []).length; if (Paint.k < n - 1) { Paint.k++; drawPaint(); } });
+$('#ptPens').addEventListener('click', e => {
+  const b = e.target.closest('[data-tick]'); if (!b) return;
+  const n = b.dataset.tick; if (Paint.ticked.has(n)) Paint.ticked.delete(n); else Paint.ticked.add(n);
+  const st = (Swap.cache.steps || [])[Paint.k];
+  drawPaint();
+  if (st && st.nos.every(x => Paint.ticked.has(x)) && Paint.k < Swap.cache.steps.length - 1) toast('这一步的笔都涂好了。等干透，再点「下一步」。');
+});
+$$('#ptView [data-pv]').forEach(b => b.addEventListener('click', () => { Paint.view = b.dataset.pv; drawPaint(); }));
+$('#dlgPaint').addEventListener('close', () => pauseTimer());
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Paint.run) wake(true); });
+$('#paintGo').addEventListener('click', openPaint);
+$('#ptDone').addEventListener('click', () => {
+  pauseTimer();
+  const min = Math.round(elapsed() / 60000);
+  $('#dlgPaint').close();
+  $('#saveDone').click();
+  if (min > 0) $('#dMin').value = min;
+  Paint.key = null;
+});
+
 /* ================= 想画 / 画过 ================= */
-const wantF = {q: '', sort: 'love', have: false, tag: null};
+const wantF = {q: '', sort: 'love', have: false, tag: null, drawn: null};
 const doneF = {q: ''};
 function itemMatches(it, q) {
   if (!q) return true;
@@ -1599,8 +1743,16 @@ function renderWant() {
     nb.innerHTML = '<article class="next paper"><div class="ph">' + (next.thumb ? '<img src="' + next.thumb + '" alt="">' : '<div class="noimg">没有图</div>') + '<span class="seal-stamp">下一<br>张</span></div>' +
       '<div style="min-width:0;display:flex;flex-direction:column;gap:8px"><span class="washi sm c">下一张就画它</span><h3>' + esc(next.title || '未命名') + '</h3>' + (next.author ? '<p class="by">' + esc(next.author) + '</p>' : '') +
       cardPens(next, 30) + (miss.length ? '<p class="hint" style="color:var(--bad)">缺 ' + miss.map(m => esc(m.no)).join('、') + '，先补货或者换一支</p>' : '<p class="hint">要用的笔都在手上</p>') +
-      '<div class="row">' + '<button class="btn primary" type="button" data-open="' + next.id + '" data-mode="swap">打开配色</button><button class="btn" type="button" data-open="' + next.id + '" data-mode="done">画完了</button>' + (next.link ? '<a class="btn quiet" href="' + esc(next.link) + '" target="_blank" rel="noopener">看原帖</a>' : '') + '</div></div></article>';
+      '<div class="row">' + (next.thumb ? '<button class="btn primary" type="button" data-open="' + next.id + '" data-mode="paint">开始画</button><button class="btn" type="button" data-open="' + next.id + '" data-mode="swap">看配色</button>' : '<button class="btn primary" type="button" data-open="' + next.id + '">先补一张图</button>') + '<button class="btn" type="button" data-open="' + next.id + '" data-mode="done">画完了</button>' + (next.link ? '<a class="btn quiet" href="' + esc(next.link) + '" target="_blank" rel="noopener">看原帖</a>' : '') + '</div></div></article>';
   } else nb.innerHTML = '';
+  const dr = wantF.drawn && Store.items.get(wantF.drawn);
+  if (dr && dr.kind === 'want' && !dr.next) {
+    const miss = missing(dr);
+    nb.innerHTML += '<article class="next paper drawn"><div class="ph">' + (dr.thumb ? '<img src="' + dr.thumb + '" alt="">' : '<div class="noimg">待补图</div>') + '<span class="seal-stamp">抽到<br>了</span></div>' +
+      '<div style="min-width:0;display:flex;flex-direction:column;gap:8px"><span class="washi sm b">今天画这个怎么样</span><h3>' + esc(dr.title || '未命名') + '</h3>' + (dr.author ? '<p class="by">' + esc(dr.author) + '</p>' : '') + cardPens(dr, 30) +
+      (miss.length ? '<p class="hint" style="color:var(--bad)">缺 ' + miss.map(m => esc(m.no)).join('、') + '</p>' : '') +
+      '<div class="row"><button class="btn primary" type="button" data-setnext="' + dr.id + '">就画它</button><button class="btn" type="button" id="wantDraw2">再抽一次</button><button class="btn quiet" type="button" data-undraw>算了</button></div></div></article>';
+  }
   let list = all.filter(i => !i.next && itemMatches(i, wantF.q) && (!wantF.tag || (i.tags || []).includes(wantF.tag)) && (!wantF.have || !missing(i).length));
   list.sort(wantF.sort === 'love' ? (a, b) => (b.love || 0) - (a.love || 0) || b.created - a.created : (a, b) => b.created - a.created);
   const g = $('#wantGrid');
@@ -1611,7 +1763,7 @@ function renderWant() {
   if (!list.length) { g.innerHTML = next && all.length === 1 ? '' : '<p class="hint" style="grid-column:1/-1">没有符合条件的。换个关键词，或者把筛选去掉。</p>'; return; }
   g.innerHTML = list.map(it => {
     const miss = missing(it);
-    return '<button class="icard paper" type="button" data-open="' + it.id + '"><span class="ph">' + (it.thumb ? '<img src="' + it.thumb + '" alt="" loading="lazy">' : '<span class="noimg">没有图</span>') + '</span>' +
+    return '<button class="icard paper" type="button" data-open="' + it.id + '"><span class="ph">' + (it.thumb ? '<img src="' + it.thumb + '" alt="" loading="lazy">' : '<span class="noimg wait"><b>待补图</b><span>点开放一张图，<br>会自动配好笔</span></span>') + '</span>' +
       '<h4>' + esc(it.title || '未命名') + '</h4><span class="meta">' + hearts(it.love) + (it.src === 'photo' ? '<span class="tag">我的照片</span>' : it.src === 'gen' ? '<span class="tag">随机生成</span>' : '') + (it.author ? '<span>' + esc(it.author) + '</span>' : '') + (it.tags || []).slice(0, 3).map(t => '<span class="tag">' + esc(t) + '</span>').join('') + '</span>' +
       cardPens(it, 8) + (miss.length ? '<span class="warnline">缺 ' + miss.length + ' 支笔</span>' : '') + '</button>';
   }).join('');
@@ -1640,13 +1792,53 @@ function renderDone() {
 }
 function penUse() { const m = new Map(); Store.items.forEach(i => { if (i.kind === 'done') (i.pens || []).forEach(p => m.set(p.no, (m.get(p.no) || 0) + 1)); }); return m; }
 $('#wantQ').addEventListener('input', e => { wantF.q = e.target.value; renderWant(); });
+function drawOne() {
+  const all = Array.from(Store.items.values()).filter(i => i.kind === 'want' && !i.next && i.id !== wantF.drawn);
+  if (!all.length) { toast(Store.items.size ? '没有别的可以抽了。' : '想画里还是空的，先存几张。'); return; }
+  const good = all.filter(i => i.thumb && !missing(i).length), pool = good.length ? good : all;
+  const w = pool.map(i => 1 + (i.love || 0)), sum = w.reduce((a, b) => a + b, 0);
+  let r = Math.random() * sum, pick = pool[0];
+  for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) { pick = pool[i]; break; } }
+  wantF.drawn = pick.id; renderWant(); window.scrollTo({top: 0, behavior: 'smooth'});
+}
+$('#wantDraw').addEventListener('click', drawOne);
+$('#nextBox').addEventListener('click', e => {
+  if (e.target.closest('#wantDraw2')) { drawOne(); return; }
+  if (e.target.closest('[data-undraw]')) { wantF.drawn = null; renderWant(); return; }
+  const b = e.target.closest('[data-setnext]'); if (!b) return;
+  const it = Store.items.get(b.dataset.setnext); if (!it) return;
+  Store.items.forEach(o => { if (o.id !== it.id && o.next) { o.next = false; saveItem(o); } });
+  it.next = true; wantF.drawn = null; saveItem(it); toast('定了，下一张就画它。');
+});
+function shareItems(text) {
+  const parts = String(text || '').split(/(?=【)/).map(t => t.trim()).filter(t => /【/.test(t) && /https?:\/\//.test(t));
+  return parts.map(parseShare).filter(Boolean);
+}
+function addLinkItems(list, extraTags) {
+  const have = new Set(Array.from(Store.items.values()).map(i => i.link));
+  let n = 0;
+  list.forEach((sh, i) => {
+    if (!sh.url || have.has(sh.url)) return;
+    have.add(sh.url);
+    saveItem({id: newId(), kind: 'want', created: Date.now() + i, title: sh.title || '小红书收藏', author: sh.author || '', link: sh.url, tags: sh.tags.concat(extraTags || []), love: 1, pens: [], n: 12, detail: 1, ov: [], extra: [], src: 'art', hasRef: false});
+    n++;
+  });
+  return n;
+}
+$('#shareSave').addEventListener('click', () => {
+  const list = shareItems($('#shareBulk').value);
+  if (!list.length) { $('#shareMsg').textContent = '没认出来。要包含【标题】和 https 链接那一段。'; return; }
+  const n = addLinkItems(list);
+  $('#shareBulk').value = ''; $('#shareMsg').textContent = '';
+  toast(n ? '存了 ' + n + ' 张「待补图」。图片保存好后，点卡片放进去就行。' : '这些链接已经存过了。');
+});
 $('#doneQ').addEventListener('input', e => { doneF.q = e.target.value; renderDone(); });
 $('#wantHave').addEventListener('change', e => { wantF.have = e.target.checked; renderWant(); });
 $$('[data-wsort]').forEach(b => b.addEventListener('click', () => { wantF.sort = b.dataset.wsort; $$('[data-wsort]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderWant(); }));
 $('#wantTags').addEventListener('click', e => { const b = e.target.closest('[data-wtag]'); if (!b) return; wantF.tag = wantF.tag === b.dataset.wtag ? null : b.dataset.wtag; renderWant(); });
 document.addEventListener('click', e => {
   const o = e.target.closest('[data-open]');
-  if (o && !o.closest('dialog')) { const it = Store.items.get(o.dataset.open); if (!it) return; if (o.dataset.mode === 'swap') openInSwap(it); else openItem(it, o.dataset.mode === 'done' || it.kind === 'done'); return; }
+  if (o && !o.closest('dialog')) { const it = Store.items.get(o.dataset.open); if (!it) return; if (o.dataset.mode === 'swap') openInSwap(it); else if (o.dataset.mode === 'paint') openInSwap(it).then(openPaint); else openItem(it, o.dataset.mode === 'done' || it.kind === 'done'); return; }
   const g = e.target.closest('[data-go]'); if (g) { showTab(g.dataset.go); return; }
   if (e.target.closest('#emptyAddDone')) { newDone(); return; }
   if (e.target.closest('[data-open-import]')) { openImport(); return; }
@@ -1658,7 +1850,7 @@ $('#addDone').addEventListener('click', newDone);
 const D = {it: null, isNew: false, refData: null, workData: null, done: false};
 const PRESET_TAGS = ['风景', '天空', '水景', '花', '植物', '动物', '人物', '建筑', '夜景', '雨', '雪', '卡通', '静物'];
 function openItem(it, showDone) {
-  D.it = plain(it); D.isNew = !Store.items.has(it.id); D.refData = null; D.workData = null; D.done = !!showDone || it.kind === 'done';
+  D.it = plain(it); D.isNew = !Store.items.has(it.id); D.refData = null; D.workData = null; D.refCv = null; D.done = !!showDone || it.kind === 'done';
   const x = D.it;
   $('#itemKindTag').textContent = x.kind === 'done' ? '画过' : '想画';
   $('#itemH').textContent = D.isNew ? (x.kind === 'done' ? '记一张画过的' : '存进「想画」') : (x.title || '未命名');
@@ -1704,7 +1896,7 @@ $$('#dRate [data-rate]').forEach(b => b.addEventListener('click', () => { const 
 $('#iDoneBtn').addEventListener('click', () => { D.done = true; renderDlg(); $('#workBox').focus(); });
 $('#refBox').addEventListener('click', () => $('#refIn').click());
 $('#workBox').addEventListener('click', () => $('#workIn').click());
-$('#refIn').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const cv = await fileToCanvas(f, 1400); D.refData = {full: jpeg(cv, 1200, 230000), thumb: jpeg(cv, 300, 30000)}; setSlot('#refBox', D.refData.thumb); } catch (er) { toast('这张图打不开。'); } });
+$('#refIn').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const cv = await fileToCanvas(f, 1400); D.refCv = cv; D.refData = {full: jpeg(cv, 1200, 230000), thumb: jpeg(cv, 300, 30000)}; setSlot('#refBox', D.refData.thumb); } catch (er) { toast('这张图打不开。'); } });
 $('#workIn').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const cv = await fileToCanvas(f, 1400); D.workData = {full: jpeg(cv, 1200, 230000), thumb: jpeg(cv, 300, 30000)}; setSlot('#workBox', D.workData.thumb); } catch (er) { toast('这张图打不开。'); } });
 $('#itemForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -1717,7 +1909,7 @@ $('#itemForm').addEventListener('submit', async e => {
     x.next = $('#iNext').checked;
     if (x.next) Store.items.forEach(o => { if (o.id !== x.id && o.next) { o.next = false; saveItem(o); } });
   }
-  if (D.refData) { x.thumb = D.refData.thumb; x.hasRef = true; }
+  if (D.refData) { x.thumb = D.refData.thumb; x.hasRef = true; if (D.refCv && !(x.pens || []).length) x.pens = quickPens(D.refCv); }
   if (D.workData) { x.workThumb = D.workData.thumb; x.hasWork = true; }
   saveItem(x);
   if (D.refData) putImg(x.id + '_ref', D.refData.full).catch(() => {});
@@ -1804,10 +1996,13 @@ function openPen(p) {
   $('#pNo').value = v.no; $('#pName').value = v.name || ''; $('#pHex').value = v.hex; $('#pColor').value = v.hex.toLowerCase(); $('#pSw').style.setProperty('--c', v.hex);
   $$('#pSt [data-st]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.st === (v.st || 'ok'))));
   const n = p ? penUse().get(p.no) || 0 : 0;
-  $('#pUse').textContent = p ? (n ? '画过的作品里用了 ' + n + ' 次' : '还没在画过的作品里用过') : '';
+  const w = p ? Array.from(Store.items.values()).filter(i => i.kind === 'want' && (i.pens || []).some(e => e.no === p.no)).length : 0;
+  $('#pUse').textContent = p ? (n ? '画过的里用了 ' + n + ' 次' : '画过的里还没用过') + ' · 想画里有 ' + w + ' 张用到' : '';
+  $('#pFind').hidden = !w;
   $('#pDel').hidden = !p; $('#pDelConfirm').hidden = true; $('#pErr').hidden = true;
   $('#dlgPen').showModal();
 }
+$('#pFind').addEventListener('click', () => { const no = penEdit; $('#dlgPen').close(); wantF.q = no; $('#wantQ').value = no; showTab('want'); renderWant(); });
 $('#pColor').addEventListener('input', e => { const h = e.target.value.toUpperCase(); $('#pHex').value = h; $('#pSw').style.setProperty('--c', h); });
 $('#pHex').addEventListener('input', e => { const h = normHex(e.target.value); if (h) { $('#pColor').value = h.toLowerCase(); $('#pSw').style.setProperty('--c', h); } });
 $$('#pSt [data-st]').forEach(b => b.addEventListener('click', () => $$('#pSt [data-st]').forEach(x => x.setAttribute('aria-pressed', String(x === b)))));
@@ -2031,30 +2226,35 @@ function linkShare(e) {
 }
 $('#iLink').addEventListener('input', linkShare);
 $('#iLink').addEventListener('change', linkShare);
-/* 你发给我的 4 张（图片是这个页面自带的文件，加进想画后存到你自己的记录里） */
+/* 你发给我的（有图的 4 张是这个页面自带的文件；后 3 条只有链接，存成待补图） */
 const SEEDS = [
   {f: 'seed/1.jpg', share: '【丙烯马克笔｜旅行⛰（附过程色号） - 见山 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/69a26246000000001a02db5c?source=webshare&xhsshare=pc_web&xsec_token=ABmW8qP-sKuupqHXeGOoB3EkLFDIIrBsh8gb48EvVoYwU=&xsec_source=pc_share', tags: ['风景', '蓝调']},
   {f: 'seed/2.jpg', share: '【丙烯马克笔翻翻乐47｜云朵加油站（附过程） - 半枝桃 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/6aca45c7000000001802e21b?source=webshare&xhsshare=pc_web&xsec_token=AB_1GPI_pbPqs-EvP0ZriOPSwrr-Qr3nEO8Jxg3UwyzgI=&xsec_source=pc_share', tags: ['天空', '晴空']},
   {f: 'seed/3.jpg', share: '【丙烯马克笔｜蓝调时刻 - 邪恶卤肉饭 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/6a7e5f6d00000000080138c5?source=webshare&xhsshare=pc_web&xsec_token=AB7wvehS_VIi-lYHORHbO2PD1--hJqqxftimzGPw0XdNI=&xsec_source=pc_share', tags: ['人物', '蓝调']},
-  {f: 'seed/4.jpg', share: '【属于夏天的|直液式丙烯马克笔|过程新手友好 - 翠西要搞艺术 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/6874a50b0000000011003411?source=webshare&xhsshare=pc_web&xsec_token=AB8a8IfQWsGW0FvrUojsgXp4vHQvieBuqJT5qhAQ97nF4=&xsec_source=pc_share', tags: ['静物', '蓝调']}
+  {f: 'seed/4.jpg', share: '【属于夏天的|直液式丙烯马克笔|过程新手友好 - 翠西要搞艺术 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/6874a50b0000000011003411?source=webshare&xhsshare=pc_web&xsec_token=AB8a8IfQWsGW0FvrUojsgXp4vHQvieBuqJT5qhAQ97nF4=&xsec_source=pc_share', tags: ['静物', '蓝调']},
+  {share: '【SALTED FISH 🐟 - oO圈圈Oo🌻 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/6a2e7150000000002101464c?source=webshare&xhsshare=pc_web&xsec_token=ABYT0B8it2ulxw8AtKRrWIn0cPEcPLl74hCSx-LXWdyNQ=&xsec_source=pc_share', tags: ['鱼']},
+  {share: '【丙烯马克笔| 一船繁花 - 小欧同学 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/69c62dd5000000001a029660?source=webshare&xhsshare=pc_web&xsec_token=AB-uDtrSAnSBsMA5he9WPku-_0Y79E8B1yV51_NciC8B4=&xsec_source=pc_share', tags: ['花']},
+  {share: '【丙烯马克笔｜羡鱼 - 清水的清 | 小红书 - 你的生活兴趣社区】 https://www.xiaohongshu.com/discovery/item/693e3c2e000000001f00b7d3?source=webshare&xhsshare=pc_web&xsec_token=ABuPFsW0EKIr0JHuwVKg7jLveKGckWya0jc91Tg0yoAQo=&xsec_source=pc_share', tags: ['鱼']}
 ].map(o => Object.assign(o, parseShare(o.share)));
 function seedLeft() { const links = new Set(Array.from(Store.items.values()).map(i => i.link)); return SEEDS.filter(o => !links.has(o.url)); }
 function renderSeeds() {
   const left = seedLeft(), card = $('#seedCard');
   card.hidden = !left.length || lsGet('suilei.seedOff') === 'off';
   if (card.hidden) return;
-  if (!$('#seedThumbs').childElementCount) $('#seedThumbs').innerHTML = SEEDS.map(o => '<figure><img src="' + o.f + '" alt="" loading="lazy"><figcaption>' + esc(o.author) + '</figcaption></figure>').join('');
+  if (!$('#seedThumbs').childElementCount) $('#seedThumbs').innerHTML = SEEDS.filter(o => o.f).map(o => '<figure><img src="' + o.f + '" alt="" loading="lazy"><figcaption>' + esc(o.author) + '</figcaption></figure>').join('');
+  const links = left.filter(o => !o.f);
+  $('#seedLinks').textContent = links.length ? '另外 ' + links.length + ' 条只有链接（' + links.map(o => o.title).join('、') + '），会存成「待补图」卡片，图片你保存好再放进去。' : '';
 }
 $('#seedOff').addEventListener('click', () => { lsSet('suilei.seedOff', 'off'); $('#seedCard').hidden = true; });
 $('#seedAdd').addEventListener('click', async () => {
-  const btn = $('#seedAdd'), left = seedLeft(); btn.disabled = true;
-  let ok = 0;
+  const btn = $('#seedAdd'), all = seedLeft(), left = all.filter(o => o.f); btn.disabled = true;
+  let ok = addLinkItems(all.filter(o => !o.f).map(o => ({title: o.title, author: o.author, url: o.url, tags: o.tags})));
   for (let i = 0; i < left.length; i++) {
     const o = left[i]; $('#seedMsg').textContent = '正在加 ' + (i + 1) + ' / ' + left.length + '…';
     try {
       const res = await fetch(o.f); if (!res.ok) throw new Error('fetch');
       const cv = await fileToCanvas(await res.blob(), 1400);
-      const it = {id: newId(), kind: 'want', created: Date.now() + i, title: o.title, author: o.author, link: o.url, tags: o.tags.concat(o.tags.length ? [] : []), love: 2, pens: quickPens(cv), n: 12, detail: 1, ov: [], extra: [], src: 'art', thumb: jpeg(cv, 300, 30000), hasRef: true};
+      const it = {id: newId(), kind: 'want', created: Date.now() + i, title: o.title, author: o.author, link: o.url, tags: o.tags.slice(), love: 2, pens: quickPens(cv), n: 12, detail: 1, ov: [], extra: [], src: 'art', thumb: jpeg(cv, 300, 30000), hasRef: true};
       saveItem(it); putImg(it.id + '_ref', jpeg(cv, 1200, 230000)).catch(() => {}); ok++;
     } catch (e) {}
   }
@@ -2062,10 +2262,22 @@ $('#seedAdd').addEventListener('click', async () => {
   toast(ok ? '加好了 ' + ok + ' 张。点卡片看配色和上色过程。' : '没加上，刷新页面再试一次。');
 });
 
+async function bootSample() {
+  const o = SEEDS[1];
+  try {
+    const res = await fetch(o.f); if (!res.ok) throw new Error('fetch');
+    const cv = await fileToCanvas(await res.blob(), 1400);
+    if (!Swap.demo && Swap.work) return;
+    setView('orig');
+    await setWork(cv, {demo: true, kind: 'art', title: o.title, n: 12, detail: 1, style: '', share: {title: o.title, author: o.author, url: o.url, tags: o.tags}});
+    $('#srcKind').textContent = '示例 · ' + o.author;
+  } catch (e) { Swap.mood = 'sunny'; makeGen(true); }
+}
+
 /* 有自己存的图时，换色页不再放示例图 */
 function openOwnIfDemo() {
   if (!Swap.demo) return;
-  const wants = Array.from(Store.items.values()).filter(i => i.kind === 'want' && (i.thumb || i.hasRef));
+  const wants = Array.from(Store.items.values()).filter(i => i.kind === 'want' && i.thumb);
   if (!wants.length) return;
   const it = wants.find(i => i.next) || wants.sort((a, b) => b.created - a.created)[0];
   Swap.demo = false;
@@ -2078,7 +2290,8 @@ function openOwnIfDemo() {
   const h = (location.hash || '').slice(1), saved = lsGet(LS.tab);
   const tab = ['swap', 'want', 'done', 'pens'].includes(h) ? h : (['swap', 'want', 'done', 'pens'].includes(saved) ? saved : 'swap');
   showTab(tab);
-  if (Array.from(Store.items.values()).some(i => i.kind === 'want' && (i.thumb || i.hasRef))) openOwnIfDemo();
-  else { Swap.mood = Math.random() < .5 ? 'sunny' : 'blue'; $$('#moodP [data-mood]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.mood === Swap.mood))); makeGen(true); }
+  Swap.demo = true;
+  if (Array.from(Store.items.values()).some(i => i.kind === 'want' && i.thumb)) openOwnIfDemo();
+  else bootSample();
 })();
 </script>

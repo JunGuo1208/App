@@ -1181,7 +1181,13 @@ function analyze(cv, k, detail) {
   let sa = 0, sb = 0, sn = 0;
   for (let i = 0; i < N; i++) { const l = L[i * 3], a = L[i * 3 + 1], b = L[i * 3 + 2]; if (l >= top && a * a + b * b < 484) { sa += a; sb += b; sn++; } }
   const a0 = sn ? Math.max(-12, Math.min(12, sa / sn)) : 0, b0 = sn ? Math.max(-12, Math.min(12, sb / sn)) : 0, vv = Swap.vivid || 1.3;
-  for (let i = 0; i < N; i++) { L[i * 3] = Math.max(0, Math.min(100, 3 + (L[i * 3] - lo) * 95 / (hi - lo))); L[i * 3 + 1] = (L[i * 3 + 1] - a0) * vv; L[i * 3 + 2] = (L[i * 3 + 2] - b0) * vv; }
+  // 黑、白、灰保持中性：只给真正有颜色、又不太暗的地方提鲜（不然黑头发会变藏青、灰桌面会变蓝）
+  const sst = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+  for (let i = 0; i < N; i++) {
+    const l = Math.max(0, Math.min(100, 3 + (L[i * 3] - lo) * 95 / (hi - lo))), wb = Math.min(1, L[i * 3] / 90), a = L[i * 3 + 1] - a0 * wb, b = L[i * 3 + 2] - b0 * wb, C = Math.hypot(a, b);
+    const f = 1 + (vv - 1) * sst(7, 18, C) * sst(14, 32, l);
+    L[i * 3] = l; L[i * 3 + 1] = a * f; L[i * 3 + 2] = b * f;
+  }
   const rnd = mulberry(1234), step = Math.max(1, Math.floor(N / 30000)), S = [];
   for (let i = 0; i < N; i += step) S.push(i);
   const C = [], first = S[Math.floor(rnd() * S.length)];
@@ -1213,10 +1219,11 @@ function analyze(cv, k, detail) {
   for (let i = 0; i < N; i++) { Lraw[i] = L[i * 3]; dark[i] = L[i * 3] < 32 ? 1 : 0; }
   // 只算「细的深色线」：本身是深色，但周围一圈大多不是深色（大片深色的山、剪影不算）
   const darkAround = gaussBlur(dark, W, H, 3 * Math.max(1, W / 860));
-  let crisp = 0;
-  for (let i = 0; i < N; i++) { if (dark[i] && darkAround[i] < .4 && lines[i] > 100) dl++; if (lines[i] > 140 && L[i * 3] < 40) crisp++; }
+  let crisp = 0; const thinRaw = new Float32Array(N);
+  for (let i = 0; i < N; i++) { if (dark[i] && darkAround[i] < .45 && L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2] < 400) { thinRaw[i] = 1; if (lines[i] > 100) dl++; } if (lines[i] > 140 && L[i * 3] < 40) crisp++; }
+  const thin = gaussBlur(thinRaw, W, H, .6);
   const Lc = gaussBlur(Lraw, W, H, 1.2);
-  return {W, H, centers, labels: lab, lines, Lc, lineRatio: dl / N, crisp: crisp / N};
+  return {W, H, centers, labels: lab, lines, Lc, thin, lineRatio: dl / N, crisp: crisp / N};
 }
 function majority(lab, W, H, K) {
   const out = new Uint8Array(lab.length), cnt = new Uint8Array(K);
@@ -1363,29 +1370,51 @@ function grain(N) { if (GR.n !== N) { const a = new Float32Array(N), rnd = mulbe
 function h1(i) { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return (v - Math.floor(v)) * 2 - 1; }
 function n1(x) { const i = Math.floor(x), f = x - i, t = f * f * (3 - 2 * f), a = h1(i); return a + (h1(i + 1) - a) * t; }
 function n2(x, y) { const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, tx = fx * fx * (3 - 2 * fx), ty = fy * fy * (3 - 2 * fy), a = h1(ix * 57 + iy * 131), b = h1((ix + 1) * 57 + iy * 131), c = h1(ix * 57 + (iy + 1) * 131), d = h1((ix + 1) * 57 + (iy + 1) * 131); return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty; }
+/* 纸：水彩纸的凹凸纹（三层噪声叠出高度，再按左上来光算明暗）。同一尺寸只算一次 */
+const PAPERTEX = {key: '', h: null, s: null};
+function paperTex(W, H) {
+  const key = W + 'x' + H; if (PAPERTEX.key === key) return PAPERTEX;
+  const N = W * H, h = new Float32Array(N), sh = new Float32Array(N), sc = Math.max(1, W / 860);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) h[y * W + x] = n2(x / (2.1 * sc), y / (2.1 * sc)) * .45 + n2(x / (5.5 * sc) + 7.7, y / (5.5 * sc) + 3.3) * .35 + n2(x / (16 * sc) + 1.9, y / (16 * sc) + 9.1) * .2;
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = y * W + x; sh[i] = (h[i - 1] - h[i + 1]) * .9 + (h[i - W] - h[i + W]) * .9; }
+  PAPERTEX.key = key; PAPERTEX.h = h; PAPERTEX.s = sh; return PAPERTEX;
+}
+/* 马克笔水彩感：
+   1 按原画明暗做层次（同一支笔里亮处提亮、暗处压暗）
+   2 笔触：笔头宽度的平行笔道，相邻笔道重叠的地方更深一点
+   3 颜料浓淡不均、边缘颜料堆积
+   4 纸的凹凸：凸起处受光、凹处颜料挂不上露出一点纸白 */
 function paintBuf() {
   if (Swap.cache.pb) return Swap.cache.pb;
   const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = absLabels(), labP = Swap.cache.dab || lab, {comp, list} = regionInfo(), Lc = r.Lc;
-  // 层次感：同一支笔的块里，原画亮的地方提亮、暗的地方压暗（就像叠一层浅色 / 深色）
   const K = Swap.map.length, sumL = new Float64Array(K), cnt = new Float64Array(K), depth = Swap.depth == null ? .65 : Swap.depth;
   for (let i = 0; i < N; i++) { sumL[labP[i]] += Lc[i]; cnt[labP[i]]++; }
-  const lut = Swap.map.map((m, v) => { const p = m.no ? penByNo(m.no) : null, pl = p ? hexLab(p.hex) : m.c.lab, t = []; for (let k = -30; k <= 30; k++) t.push(lab2rgb(Math.max(0, Math.min(100, pl[0] + k)), pl[1], pl[2])); return t; });
+  const lut = Swap.map.map((m) => { const p = m.no ? penByNo(m.no) : null, pl = p ? hexLab(p.hex) : m.c.lab, t = []; for (let k = -30; k <= 30; k++) t.push(lab2rgb(Math.max(0, Math.min(100, pl[0] + k)), pl[1], pl[2])); return t; });
   const meanL = Array.from(sumL, (v, k) => cnt[k] ? v / cnt[k] : 50);
   const D = new Uint8Array(N).fill(8);
   for (let i = 0; i < N; i++) { const x = i % W; if ((x > 0 && lab[i - 1] !== lab[i]) || (x < W - 1 && lab[i + 1] !== lab[i]) || (i >= W && lab[i - W] !== lab[i]) || (i + W < N && lab[i + W] !== lab[i])) D[i] = 0; }
   for (let i = 0; i < N; i++) { const x = i % W; let v = D[i]; if (x > 0) v = Math.min(v, D[i - 1] + 1); if (i >= W) v = Math.min(v, D[i - W] + 1); D[i] = v; }
   for (let i = N - 1; i >= 0; i--) { const x = i % W; let v = D[i]; if (x < W - 1) v = Math.min(v, D[i + 1] + 1); if (i + W < N) v = Math.min(v, D[i + W] + 1); D[i] = v; }
-  const ang = list.map(c => { const w = c.maxx - c.minx + 1, h = c.maxy - c.miny + 1; return (w >= h * .8 ? 0 : Math.PI / 2) + h1(c.id * 7.3) * .35; });
-  const cs = ang.map(Math.cos), sn = ang.map(Math.sin), g = grain(N), sc = Math.max(1, W / 860), out = new Uint8ClampedArray(N * 4);
+  const ang = list.map(c => { const w = c.maxx - c.minx + 1, h = c.maxy - c.miny + 1; return (w >= h * .8 ? 0 : Math.PI / 2) + h1(c.id * 7.3) * .3; });
+  const cs = ang.map(Math.cos), sn = ang.map(Math.sin), sc = Math.max(1, W / 860), tip = 9 * sc, out = new Uint8ClampedArray(N * 4);
+  const PT = paperTex(W, H), ph = PT.h, ps = PT.s;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x, ci = comp[i], vp = labP[i], dL = Math.max(-30, Math.min(30, Math.round((Lc[i] - meanL[vp]) * depth))), c = lut[vp][dL + 30];
-    const u = (x * cs[ci] + y * sn[ci]) / sc, v = (-x * sn[ci] + y * cs[ci]) / sc;
-    const streak = n1(v / 3.2 + ci * 17.1) * .6 + n1(v / 11 + ci * 3.7) * .4, along = n2(u / 55 + ci, v / 7), bloom = n2(x / (70 * sc) + 3.1, y / (70 * sc) + ci * .37);
-    let f = 1 + .035 * streak + .02 * along + .014 * g[i];
-    const dd = D[i]; if (dd < 4) f *= 1 - .12 * (1 - dd / 4);
+    const u = x * cs[ci] + y * sn[ci], v = -x * sn[ci] + y * cs[ci];
+    // 笔道：每条宽一个笔头，边缘轻微抖动；两条笔道交叠处（t 接近 0）多一层颜料
+    const band = v / tip + n1(u / (38 * sc) + ci * 5.3) * .25, t = band - Math.floor(band), overlap = t < .14 ? (1 - t / .14) : 0;
+    const dens = n2(x / (46 * sc) + ci * .7, y / (46 * sc) + 2.3);
+    let f = 1 - .06 * overlap + .03 * dens;
+    const dd = D[i]; if (dd < 4) f *= 1 - .1 * (1 - dd / 4);
+    f *= 1 + .07 * ps[i];
     let R = c[0] * f, G = c[1] * f, B = c[2] * f;
-    const lift = Math.max(0, bloom) * .07; R += (255 - R) * lift; G += (255 - G) * lift; B += (255 - B) * lift;
-    if (dd === 0 && g[i] > .25) { R += (251 - R) * .45; G += (250 - G) * .45; B += (246 - B) * .45; }
+    // 纸纹凹处颜料挂不满，透一点纸白；交界处留一条很细的纸缝
+    let paper = ph[i] < -.3 ? (-ph[i] - .3) * .55 : 0;
+    if (dd === 0) paper = Math.max(paper, .05 + Math.max(0, -ph[i]) * .22);
+    if (paper > 0) { R += (250 - R) * paper; G += (249 - G) * paper; B += (244 - B) * paper; }
+    // 原画里细的深色笔画（气球线、小船、气泡边）抽象时会被抹掉，用细头深色笔补回来
+    const th = r.thin ? r.thin[i] : 0;
+    if (th > .06) { const a = Math.min(1, th * 1.7) * .92; R += (30 - R) * a; G += (28 - G) * a; B += (34 - B) * a; }
     out[i * 4] = R; out[i * 4 + 1] = G; out[i * 4 + 2] = B; out[i * 4 + 3] = 255;
   }
   return (Swap.cache.pb = out);
@@ -1480,8 +1509,8 @@ function render(cv, view, step) {
     for (let i = 0; i < N; i++) put(i, PAPER, LN[i] / 255);
   } else if (view === 'step') {
     const so = Swap.cache.stepOf;
-    const ed = outlineData().edge;
-    for (let i = 0; i < N; i++) { const on = so && so[i] <= step; put(i, on ? (pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : col[lab[i]]) : PAPER, on ? LN[i] * lk : ed[i] * .55); }
+    const ed = outlineData().edge, pps = paperTex(W, H).s;
+    for (let i = 0; i < N; i++) { const on = so && so[i] <= step; if (!on) { const k = 1 + .045 * pps[i]; put(i, [PAPER[0] * k, PAPER[1] * k, PAPER[2] * k], ed[i] * .55); continue; } put(i, on ? (pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : col[lab[i]]) : PAPER, on ? LN[i] * lk : ed[i] * .55); }
   } else if (view === 'sketch') {
     const sk = sketchData(), sl = sk.lab, f = Swap.skFill, EDGE = [84, 86, 100];
     const fillc = sk.keys.map(k => { const c = hex2rgb(k.hex); return [PAPER[0] + (c[0] - PAPER[0]) * f, PAPER[1] + (c[1] - PAPER[1]) * f, PAPER[2] + (c[2] - PAPER[2]) * f]; });
@@ -1491,7 +1520,7 @@ function render(cv, view, step) {
       d[i * 4] = c[0] + (EDGE[0] - c[0]) * e; d[i * 4 + 1] = c[1] + (EDGE[1] - c[1]) * e; d[i * 4 + 2] = c[2] + (EDGE[2] - c[2]) * e; d[i * 4 + 3] = 255;
     }
   } else if (pb) {
-    for (let i = 0; i < N; i++) { const a = LN[i] * lk, R = pb[i * 4], G = pb[i * 4 + 1], B = pb[i * 4 + 2]; d[i * 4] = R + (INK[0] - R) * a; d[i * 4 + 1] = G + (INK[1] - G) * a; d[i * 4 + 2] = B + (INK[2] - B) * a; d[i * 4 + 3] = 255; }
+    for (let i = 0; i < N; i++) { const a = LN[i] * lk * .75, R = pb[i * 4], G = pb[i * 4 + 1], B = pb[i * 4 + 2]; d[i * 4] = R + (R * .28 + 14 - R) * a; d[i * 4 + 1] = G + (G * .28 + 14 - G) * a; d[i * 4 + 2] = B + (B * .3 + 18 - B) * a; d[i * 4 + 3] = 255; }
   } else {
     for (let i = 0; i < N; i++) put(i, col[lab[i]], LN[i] * lk);
   }

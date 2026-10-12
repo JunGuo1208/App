@@ -380,6 +380,11 @@ dialog.paint{width:min(1100px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
 .pstep .n{font-family:var(--f-disp);color:var(--shu);font-size:14px}
 .pstep b{font-size:15px}
 .pstep p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+.pstep p.do{font-size:13.5px;color:var(--ink);line-height:1.5}
+.pstep p.tipl,.tipl{font-size:12px;color:var(--ink-3)}
+#ptD{display:flex;flex-direction:column;gap:6px}
+#ptD .do{font-size:16px;color:var(--ink);line-height:1.5}
+#ptD .tipl.w{color:var(--warn)}
 .gen{display:flex;flex-direction:column;gap:10px}
 .gen .btn.primary{align-self:stretch}
 .style-row{display:flex;flex-direction:column;gap:6px}
@@ -565,9 +570,9 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           </div>
           <p class="hint" id="fidHint" hidden></p>
           <details class="adj" id="adj"><summary><span>调整</span><b id="adjSum">10 色 · 简化 1 · 原色</b></summary><div>
-          <div class="ctl"><label for="nIn">颜色数</label><input type="range" id="nIn" min="4" max="28" value="16"><output id="nOut" for="nIn">16</output></div>
-          <div class="ctl" id="detailCtl"><label for="detIn">抽象度</label><input type="range" id="detIn" min="0" max="4" value="2"><output id="detOut" for="detIn">2</output></div>
-          <div class="ctl"><label for="depIn">层次感</label><input type="range" id="depIn" min="0" max="100" step="5" value="65"><output id="depOut" for="depIn">65</output></div>
+          <div class="ctl"><label for="nIn">颜色数</label><input type="range" id="nIn" min="4" max="28" value="18"><output id="nOut" for="nIn">18</output></div>
+          <div class="ctl" id="detailCtl"><label for="detIn">抽象度</label><input type="range" id="detIn" min="0" max="4" value="1"><output id="detOut" for="detIn">1</output></div>
+          <div class="ctl"><label for="depIn">层次感</label><input type="range" id="depIn" min="0" max="100" step="5" value="80"><output id="depOut" for="depIn">80</output></div>
           <div class="ctl"><label for="vivIn">鲜艳度</label><input type="range" id="vivIn" min="100" max="170" step="5" value="130"><output id="vivOut" for="vivIn">130</output></div>
           <div class="style-row"><span class="label">风格</span>
             <div class="pills" role="group" aria-label="风格" id="styleP">
@@ -590,7 +595,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
       </aside>
     </div>
     <section class="proc paper" id="procOut" hidden>
-      <div class="proc-head"><h3>上色过程</h3><span class="hint">先画哪、后画哪。点一步，上面就显示画到这一步的样子。</span>
+      <div class="proc-head"><h3>上色过程</h3><span class="hint">红框圈出的就是这一步要涂的地方。点一步，上面放大看。</span>
         <div class="pills" role="group" aria-label="用哪种顺序" id="procMode" hidden><button type="button" data-pm="ai" aria-pressed="true">Claude 看图排的</button><button type="button" data-pm="auto" aria-pressed="false">自动排的</button></div><button class="btn small shu" type="button" id="aiPlan" hidden>Claude 专业拆解</button><button class="btn small primary" type="button" id="paintGo">开始画（一步步来）</button></div>
       <div id="procTips" hidden></div>
       <ol class="proc-steps" id="procSteps"></ol>
@@ -1222,8 +1227,13 @@ function analyze(cv, k, detail) {
   let crisp = 0; const thinRaw = new Float32Array(N);
   for (let i = 0; i < N; i++) { if (dark[i] && darkAround[i] < .45 && L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2] < 400) { thinRaw[i] = 1; if (lines[i] > 100) dl++; } if (lines[i] > 140 && L[i * 3] < 40) crisp++; }
   const thin = gaussBlur(thinRaw, W, H, .6);
+  const light = new Float32Array(N);
+  for (let i = 0; i < N; i++) light[i] = L[i * 3] > 80 && L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2] < 500 ? 1 : 0;
+  const lightAround = gaussBlur(light, W, H, 3 * Math.max(1, W / 860)), glintRaw = new Float32Array(N);
+  for (let i = 0; i < N; i++) if (light[i] && lightAround[i] < .4) glintRaw[i] = 1;
+  const glint = gaussBlur(glintRaw, W, H, .6);
   const Lc = gaussBlur(Lraw, W, H, 1.2);
-  return {W, H, centers, labels: lab, lines, Lc, thin, lineRatio: dl / N, crisp: crisp / N};
+  return {W, H, centers, labels: lab, lines, Lc, thin, glint, lineRatio: dl / N, crisp: crisp / N};
 }
 function majority(lab, W, H, K) {
   const out = new Uint8Array(lab.length), cnt = new Uint8Array(K);
@@ -1256,11 +1266,11 @@ function mergeSmall(lab, W, H, minArea) {
 
 /* ================= 换色状态 ================= */
 const Swap = {
-  work: null, kind: 'art', demo: true, n: 14, detail: 2, vivid: 1.3, paintStyle: 'wc', lineOn: false, split: .5, skFill: .35, skLab: 'num', ai: null, procMode: 'auto', cropped: false, onlyHave: true, view: 'pens',
+  work: null, kind: 'art', demo: true, n: 18, detail: 1, vivid: 1.3, paintStyle: 'wc', lineOn: false, split: .5, skFill: .35, skLab: 'num', ai: null, procMode: 'auto', cropped: false, onlyHave: true, view: 'pens',
   res: null, map: [], ov: [], extra: [], itemId: null, share: null, pick: null, cache: {}, style: '', styleSet: null, mood: 'sunny', step: 0,
   rematch() { if (this.res) { this.match(); render(); renderSwapList(); } }
 };
-function procMax() { return 860; }
+function procMax() { return 980; }
 async function setWork(cv, opts) {
   Swap.work = toCanvas(cv, 1400);
   Swap.demo = !!opts.demo; Swap.itemId = opts.itemId || null; Swap.ov = opts.ov || []; Swap.extra = opts.extra || []; Swap.pick = null;
@@ -1286,7 +1296,7 @@ function setKind(k, silent) {
   $('#dropSub').textContent = k === 'photo' ? '风景、宠物、食物都行。会简化成色块，再配上你的笔，生成一张数字油画式的画稿' : '小红书里长按保存图片 / 截图都行，电脑上可以直接粘贴';
   $('#shareField').hidden = k !== 'art';
   if (!silent) {
-    const det = k === 'photo' ? 3 : 2, n = k === 'photo' ? 12 : 14;
+    const det = k === 'photo' ? 2 : 1, n = k === 'photo' ? 14 : 18;
     Swap.detail = det; $('#detIn').value = det; $('#detOut').value = det;
     Swap.n = n; $('#nIn').value = n; $('#nOut').value = n;
     if (k === 'photo' && Swap.view === 'orig') setView('sketch');
@@ -1387,7 +1397,7 @@ function paperTex(W, H) {
 function paintBuf() {
   if (Swap.cache.pb) return Swap.cache.pb;
   const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = absLabels(), labP = Swap.cache.dab || lab, {comp, list} = regionInfo(), Lc = r.Lc;
-  const K = Swap.map.length, sumL = new Float64Array(K), cnt = new Float64Array(K), depth = Swap.depth == null ? .65 : Swap.depth;
+  const K = Swap.map.length, sumL = new Float64Array(K), cnt = new Float64Array(K), depth = Swap.depth == null ? .8 : Swap.depth;
   for (let i = 0; i < N; i++) { sumL[labP[i]] += Lc[i]; cnt[labP[i]]++; }
   const lut = Swap.map.map((m) => { const p = m.no ? penByNo(m.no) : null, pl = p ? hexLab(p.hex) : m.c.lab, t = []; for (let k = -30; k <= 30; k++) t.push(lab2rgb(Math.max(0, Math.min(100, pl[0] + k)), pl[1], pl[2])); return t; });
   const meanL = Array.from(sumL, (v, k) => cnt[k] ? v / cnt[k] : 50);
@@ -1415,6 +1425,9 @@ function paintBuf() {
     // 原画里细的深色笔画（气球线、小船、气泡边）抽象时会被抹掉，用细头深色笔补回来
     const th = r.thin ? r.thin[i] : 0;
     if (th > .06) { const a = Math.min(1, th * 1.7) * .92; R += (30 - R) * a; G += (28 - G) * a; B += (34 - B) * a; }
+    // 小的高光（气泡、水面闪光、亮边）最后用白笔点回来
+    const gl = r.glint ? r.glint[i] : 0;
+    if (gl > .08) { const a = Math.min(1, gl * 1.6) * .9; R += (252 - R) * a; G += (251 - G) * a; B += (247 - B) * a; }
     out[i * 4] = R; out[i * 4 + 1] = G; out[i * 4 + 2] = B; out[i * 4 + 3] = 255;
   }
   return (Swap.cache.pb = out);
@@ -1510,7 +1523,10 @@ function render(cv, view, step) {
   } else if (view === 'step') {
     const so = Swap.cache.stepOf;
     const ed = outlineData().edge, pps = paperTex(W, H).s;
-    for (let i = 0; i < N; i++) { const on = so && so[i] <= step; if (!on) { const k = 1 + .045 * pps[i]; put(i, [PAPER[0] * k, PAPER[1] * k, PAPER[2] * k], ed[i] * .55); continue; } put(i, on ? (pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : col[lab[i]]) : PAPER, on ? LN[i] * lk : ed[i] * .55); }
+    const HL = [232, 85, 62];
+    for (let i = 0; i < N; i++) {
+      if (so && so[i] === step) { const xx = i % W; let e = false; for (const o of [-2, -1, 1, 2]) { const xo = xx + o; if (xo >= 0 && xo < W && so[i + o] !== step) e = true; const yo = i + o * W; if (yo >= 0 && yo < N && so[yo] !== step) e = true; } if (e) { d[i * 4] = HL[0]; d[i * 4 + 1] = HL[1]; d[i * 4 + 2] = HL[2]; d[i * 4 + 3] = 255; continue; } }
+      const on = so && so[i] <= step; if (!on) { const k = 1 + .045 * pps[i]; put(i, [PAPER[0] * k, PAPER[1] * k, PAPER[2] * k], ed[i] * .55); continue; } put(i, on ? (pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : col[lab[i]]) : PAPER, on ? LN[i] * lk : ed[i] * .55); }
   } else if (view === 'sketch') {
     const sk = sketchData(), sl = sk.lab, f = Swap.skFill, EDGE = [84, 86, 100];
     const fillc = sk.keys.map(k => { const c = hex2rgb(k.hex); return [PAPER[0] + (c[0] - PAPER[0]) * f, PAPER[1] + (c[1] - PAPER[1]) * f, PAPER[2] + (c[2] - PAPER[2]) * f]; });
@@ -1662,12 +1678,12 @@ function whereOf(c, W, H) {
   return s;
 }
 const CATS = [
-  {s: '背景', tool: '粗头平涂', tip: '同一个方向一笔接一笔涂满，边缘先留一点，等主体画完再收边。'},
-  {s: '主体大块', tool: '粗头平涂', tip: '先把大的颜色铺上去，不管细节。'},
-  {s: '中间色块', tool: '中头', tip: '稍微压住前一层的边，接缝就不会露白。'},
-  {s: '小细节', tool: '细头', tip: '小块颜色一点点补，宁可少不要多。'},
-  {s: '暗部和剪影', tool: '细头勾线', tip: '压暗部、画剪影、勾轮廓，画面一下就立起来。'},
-  {s: '高光', tool: '细头点涂', tip: '最后点高光、勾亮边，下面一定要干透。'}
+  {s: '铺大色', tool: '粗头', tip: '往一个方向一笔接一笔涂，边上先留一点，最后再收边。'},
+  {s: '铺大色', tool: '粗头', tip: '先铺颜色，不用管细节。'},
+  {s: '涂中块', tool: '中头', tip: '边上稍微压住前一层，接缝就不会露白。'},
+  {s: '补小块', tool: '细头', tip: '小块一点点补，宁可少涂不要涂出界。'},
+  {s: '压暗部', tool: '细头', tip: '暗部一压，画面马上就立体了。'},
+  {s: '点高光', tool: '细头', tip: '一定等下面干透再点，不然会糊。'}
 ];
 function autoSteps() {
   const r = Swap.res, W = r.W, H = r.H, N = W * H, {comp, list} = regionInfo();
@@ -1693,7 +1709,7 @@ function autoSteps() {
   per.forEach((e, key) => { if (e.to !== key) return; const small = e.area < N * .008 && (e.ph === 1 || e.ph === 2); const sk = e.ph === 3 ? '3|all' : small ? e.ph + '|rest' : key; const m = subs.get(sk) || {k: e.k, ph: e.ph, rest: small || e.ph === 3, nos: [], area: 0}; m.area += e.area; m.k = Math.min(m.k, e.k); if (!m.nos.includes(e.no)) m.nos.push(e.no); subs.set(sk, m); e.sub = sk; });
   per.forEach(e => { if (!e.sub) e.sub = per.get(e.to).sub; });
   const Lof = no => hexLab(penByNo(no).hex)[0];
-  const arr = Array.from(subs.entries()).sort((a, b) => a[1].ph - b[1].ph || (a[1].rest - b[1].rest) || a[1].k - b[1].k || (a[1].ph === 2 ? b[1].area - a[1].area : Lof(b[1].nos[0]) - Lof(a[1].nos[0])));
+  const arr = Array.from(subs.entries()).sort((a, b) => a[1].ph - b[1].ph || (a[1].rest - b[1].rest) || (a[1].ph <= 2 ? b[1].area - a[1].area : Lof(b[1].nos[0]) - Lof(a[1].nos[0])));
   const idx = new Map(); arr.forEach(([key], j) => idx.set(key, j));
   const last = Math.max(0, arr.length - 1), stepOf = new Uint8Array(N), compStep = new Int16Array(list.length);
   list.forEach((c, i) => { const k = cls[i]; compStep[i] = k < 0 ? last : idx.get(per.get(PH[k] + '|' + c.no).sub); });
@@ -1701,21 +1717,21 @@ function autoSteps() {
   const steps = arr.map(([key, m]) => {
     const cs = list.filter((c, i) => cls[i] >= 0 && compStep[i] === idx.get(key)).sort((a, b) => b.area - a.area);
     const C = m.ph === 3 ? CATS[5] : m.rest ? CATS[3] : CATS[m.k];
-    if (m.ph === 3) return {t: '高光和提亮', tool: C.tool, d: '用' + m.nos.map(no => (penByNo(no).name || '') + '（' + no + '）').join('、') + '点最亮的地方：' + Array.from(new Set(cs.slice(0, 8).map(c => whereOf(c, W, H)))).slice(0, 4).join('、') + '。' + C.tip, nos: m.nos.slice(0, 10)};
+    if (m.ph === 3) return {t: '点高光', tool: '细头', d: '用' + m.nos.map(no => (penByNo(no).name || no)).join('、') + '把' + Array.from(new Set(cs.slice(0, 8).map(c => whereOf(c, W, H)))).slice(0, 3).join('、') + '最亮的地方点上。', tip: C.tip, nos: m.nos.slice(0, 10), wait: false};
     if (m.rest) {
-      return {t: (m.ph === 2 ? '暗部' : '细节') + '：其余小块', tool: C.tool, d: '把剩下零碎的小块补上：' + m.nos.slice(0, 6).map(no => (penByNo(no).name || '') + '（' + no + '）').join('、') + '。' + C.tip, nos: m.nos.slice(0, 10)};
+      return {t: m.ph === 2 ? '补暗部小块' : '补小块', tool: '细头', d: '框里剩下的小块，用细头一点点补上。', tip: C.tip, nos: m.nos.slice(0, 10)};
     }
     const no = m.nos[0], p = penByNo(no), wh = [];
     cs.forEach(c => { const w = whereOf(c, W, H); if (wh.length < 4 && !wh.includes(w)) wh.push(w); });
-    const label = m.ph === 0 ? (m.k === 0 ? '背景' : '主体大块') : m.ph === 1 ? '中块和细节' : '暗部和剪影';
-    const tool = m.ph === 0 ? '粗头平涂' : m.ph === 1 ? (m.area > N * .03 ? '中头' : '细头') : '细头勾线';
-    return {t: label + '：' + (p.name || no), tool, d: '用' + (p.name || '') + '（' + no + '）画' + wh.join('、') + '，约占画面 ' + Math.max(1, Math.round(m.area / N * 100)) + '%。' + (m.ph === 0 ? CATS[m.k].tip : m.ph === 1 ? CATS[2].tip : CATS[4].tip), nos: [no], wait: m.ph === 0};
+    const cat = m.ph === 0 ? m.k : m.ph === 1 ? 2 : 4, label = CATS[cat].s;
+    const tool = m.ph === 0 ? '粗头' : m.ph === 1 ? (m.area > N * .03 ? '中头' : '细头') : '细头';
+    return {t: label + ' · ' + (p.name || no), tool, d: '用' + tool + '把框里的' + wh.slice(0, 3).join('、') + '涂满。', tip: CATS[cat].tip, nos: [no], wait: m.ph === 0};
   });
   return {steps, stepOf};
 }
 function aiSteps() {
   const a = Swap.ai, r = Swap.res, W = r.W, H = r.H, N = W * H, lab = absLabels();
-  const steps = a.steps.map(st => ({t: st.title, d: (st.where ? st.where + '：' : '') + st.how, nos: st.pens, box: st.box, tool: st.tool, wait: st.wait}));
+  const steps = a.steps.map(st => ({t: st.title, d: st.how, tip: st.tip, nos: st.pens, box: st.box, tool: st.tool, wait: st.wait}));
   const last = steps.length - 1, stepOf = new Uint8Array(N);
   const penOf = Swap.map.map(m => m.no);
   for (let i = 0; i < N; i++) {
@@ -1743,7 +1759,7 @@ function renderSteps() {
   const tips = $('#procTips');
   if (aiBusy) {} else if (Swap.ai && Swap.procMode === 'ai') { tips.hidden = false; tips.innerHTML = analHTML(Swap.ai); } else tips.hidden = true;
   const olist = $('#procSteps');
-  olist.innerHTML = steps.map((st, k) => '<li><button type="button" class="pstep" data-step="' + k + '" aria-pressed="' + (Swap.view === 'step' && Swap.step === k) + '"><canvas width="10" height="10"></canvas><span class="n">第 ' + (k + 1) + ' 步</span><b>' + esc(st.t) + '</b>' + (st.tool || st.wait ? '<span class="sbadges">' + (st.tool ? '<i>' + esc(st.tool) + '</i>' : '') + (st.wait ? '<i class="w">画完等干</i>' : '') + '</span>' : '') + '<span class="penstrip">' + st.nos.map(n => penHTML(penByNo(n), 'mini')).join('') + '</span><p>' + esc(st.d) + '</p></button></li>').join('');
+  olist.innerHTML = steps.map((st, k) => '<li><button type="button" class="pstep" data-step="' + k + '" aria-pressed="' + (Swap.view === 'step' && Swap.step === k) + '"><canvas width="10" height="10"></canvas><span class="n">第 ' + (k + 1) + ' 步</span><b>' + esc(st.t) + '</b>' + (st.tool || st.wait ? '<span class="sbadges">' + (st.tool ? '<i>' + esc(st.tool) + '</i>' : '') + (st.wait ? '<i class="w">画完等干</i>' : '') + '</span>' : '') + '<span class="penstrip">' + st.nos.map(n => penHTML(penByNo(n), 'mini')).join('') + '</span><p class="do">' + esc(st.d) + '</p>' + (st.tip ? '<p class="tipl">小提示：' + esc(st.tip) + '</p>' : '') + '</button></li>').join('');
   const W = r.W, H = r.H, sc = Math.max(1, Math.floor(W / 240)), lab = absLabels(), LN = r.lines, pb = Swap.paintStyle === 'wc' ? paintBuf() : null;
   const col = Swap.map.map(m => { const p = m.no ? penByNo(m.no) : null; return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
   const lk = Swap.lineOn ? .9 / 255 : 0, ol = outlineData().lab;
@@ -1754,6 +1770,7 @@ function renderSteps() {
       const yy = Math.min(H - 1, y * sc), xs = Math.min(W - 1, xx * sc), i = yy * W + xs, on = so[i] <= k, c = on ? (pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : col[lab[i]]) : [251, 250, 246], o = (y * cv.width + xx) * 4;
       const e = !on && ((xs + sc < W && ol[i + sc] !== ol[i]) || (yy + sc < H && ol[i + sc * W] !== ol[i]));
       const a = on ? LN[i] * lk : e ? .55 : 0;
+      if (so[i] === k && ((xs + sc < W && so[i + sc] !== k) || (xs >= sc && so[i - sc] !== k) || (yy + sc < H && so[i + sc * W] !== k) || (yy >= sc && so[i - sc * W] !== k))) { d[o] = 232; d[o + 1] = 85; d[o + 2] = 62; d[o + 3] = 255; continue; }
       d[o] = c[0] + (36 - c[0]) * a; d[o + 1] = c[1] + (38 - c[1]) * a; d[o + 2] = c[2] + (50 - c[2]) * a; d[o + 3] = 255;
     }
     x.putImageData(im, 0, 0);
@@ -1925,7 +1942,8 @@ async function runAi(auto) {
     '拆解要说到点子上：构图（视觉中心在哪、画面怎么分层：远/中/近）、光源（从哪边来、亮面暗面投影在哪）、配色（主色、辅助色、点缀色，冷暖关系）、难点（最容易画坏的地方和怎么处理）。\n' +
     '起稿：告诉我只需要先轻轻勾哪几条大轮廓（不超过 5 条，说清楚位置），哪些细节不用起稿、直接画。\n' +
     '步骤：按真实画法排，先画哪个部位、后画哪个部位，一般是先背景后主体、先大面积后小细节、先浅后深（大的深色剪影可以早一点）、亮部高光最后。每一步只画一个部位或一层颜色，写清楚：画哪个部位、在画面哪里、用哪几支笔（优先用上面已经对应好的色号，也可以用我手上有的其他色号）、用什么笔头和笔法（粗头平涂 / 中头 / 细头 / 点涂 / 勾线 / 叠色 / 留白）、方向和力度、要不要等干。再给这个部位在图里的大致范围 box=[左,上,右,下]，都是 0 到 1 的比例。\n' +
-    '只返回 JSON：{"look":"一句话说这幅画好看在哪","lines":true 或 false（原画有没有明显的深色勾线）,"analysis":{"构图":"…","光源":"…","配色":"…","难点":"…"},"prep":"起稿建议","steps":[{"title":"部位，不超过10个字","where":"在画面哪里","box":[0,0,1,0.4],"pens":["色号"],"tool":"粗头平涂/中头/细头/点涂/勾线/叠色","how":"2到3句，具体怎么画","wait":true}],"tips":["最多5条"]}。steps 8 到 14 步。';
+    '所有文字都用大白话、短句，像跟刚入门的朋友说话，不要术语堆砌：analysis 每条不超过 40 个字，how 不超过 35 个字、只说这一步动手做什么，tip 不超过 25 个字。\n' +
+    '只返回 JSON：{"look":"一句话说这幅画好看在哪","lines":true 或 false（原画有没有明显的深色勾线）,"analysis":{"构图":"…","光源":"…","配色":"…","难点":"…"},"prep":"起稿建议","steps":[{"title":"部位，不超过10个字","where":"在画面哪里","box":[0,0,1,0.4],"pens":["色号"],"tool":"粗头平涂/中头/细头/点涂/勾线/叠色","how":"一句话：这一步动手做什么","tip":"一句小提示，可以为空","wait":true}],"tips":["最多5条"]}。steps 8 到 14 步。';
   try {
     const blob = await toBlob(toCanvas(Swap.work, 1100), .85);
     const res = await sampleFn.json(prompt, {images: [blob], signal: planAbort.signal, modelTier: 'complex'});
@@ -1949,7 +1967,7 @@ function cleanAi(r) {
   const steps = r.steps.slice(0, 16).map(s => {
     let b = Array.isArray(s.box) && s.box.length === 4 ? s.box.map(num) : null;
     if (b && (b[2] <= b[0] || b[3] <= b[1])) b = null;
-    return {title: str(s.title, 24), where: str(s.where, 80), box: b, pens: (Array.isArray(s.pens) ? s.pens : []).map(v => String(v).trim()).filter(n => ok.has(n)).slice(0, 8), tool: str(s.tool, 16), how: str(s.how, 400), wait: !!s.wait};
+    return {title: str(s.title, 24), where: str(s.where, 80), box: b, pens: (Array.isArray(s.pens) ? s.pens : []).map(v => String(v).trim()).filter(n => ok.has(n)).slice(0, 8), tool: str(s.tool, 16), how: str(s.how, 400), tip: str(s.tip, 80), wait: !!s.wait};
   }).filter(s => s.title);
   if (!steps.length) return null;
   const A = r.analysis && typeof r.analysis === 'object' ? r.analysis : {}, analysis = {};
@@ -2006,7 +2024,7 @@ function drawPaint() {
   const steps = Swap.cache.steps || [], st = steps[Paint.k]; if (!st) return;
   render($('#ptCv'), Paint.view === 'step' ? 'step' : Paint.view, Paint.k);
   $('#ptN').textContent = '第 ' + (Paint.k + 1) + ' / ' + steps.length + ' 步';
-  $('#ptT').textContent = st.t; $('#ptD').textContent = (st.tool ? '【' + st.tool + '】' : '') + st.d + (st.wait ? ' 画完等干透再进行下一步。' : '');
+  $('#ptT').textContent = st.t; $('#ptD').innerHTML = '<span class="do">' + esc(st.d) + '</span>' + (st.tip ? '<span class="tipl">小提示：' + esc(st.tip) + '</span>' : '') + (st.wait ? '<span class="tipl w">画完等干透，再点「下一步」。</span>' : '');
   $('#ptPens').innerHTML = st.nos.map(n => { const p = penByNo(n), on = Paint.ticked.has(n); return '<li><button type="button" class="pt-pen" data-tick="' + esc(n) + '" aria-pressed="' + on + '">' + penHTML(p) + '<span><b>' + esc(p ? (p.name || p.no) : n) + '</b><small>' + (on ? '涂好了' : '涂好了点一下') + '</small></span></button></li>'; }).join('');
   $('#ptPrev').disabled = Paint.k === 0;
   const last = Paint.k === steps.length - 1;
@@ -2272,7 +2290,7 @@ async function openInSwap(it) {
     const img = await loadImg(data);
     showTab('swap');
     Swap.split = .5; Swap.view = 'compare';
-    await setWork(img, {itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', style: it.style || '', ai: it.plan2 || null, title: it.title, n: it.abs != null ? it.n : 14, detail: it.abs != null ? it.abs : 2, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
+    await setWork(img, {itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', style: it.style || '', ai: it.plan2 || null, title: it.title, n: it.abs != null ? it.n : 18, detail: it.abs != null ? it.abs : 1, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
     setView('compare');
     if (!it.plan2) runAi(true);
   } catch (e) { toast('图打不开了。'); }
@@ -2622,7 +2640,7 @@ async function bootSample() {
     const res = await fetch(o.f); if (!res.ok) throw new Error('fetch');
     const cv = await fileToCanvas(await res.blob(), 1400);
     if (!Swap.demo && Swap.work) return;
-    await setWork(cv, {demo: true, kind: 'art', title: o.title, n: 14, detail: 2, style: '', share: {title: o.title, author: o.author, url: o.url, tags: o.tags}});
+    await setWork(cv, {demo: true, kind: 'art', title: o.title, n: 18, detail: 1, style: '', share: {title: o.title, author: o.author, url: o.url, tags: o.tags}});
     $('#srcKind').textContent = '示例 · ' + o.author; Swap.split = .5; setView('compare');
   } catch (e) { $('#busy').hidden = true; }
 }

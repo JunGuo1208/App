@@ -1182,7 +1182,11 @@ function analyze(cv, k, detail) {
   // 拍出来的画总是偏灰偏暗：把纸校成白的，拉开明暗，再把颜色提鲜，这样才对得上真正用的那支笔
   const hist = new Uint32Array(101); for (let i = 0; i < N; i++) hist[Math.max(0, Math.min(100, Math.round(L[i * 3])))]++;
   const pct = q => { let acc = 0; for (let v = 0; v <= 100; v++) { acc += hist[v]; if (acc >= q * N) return v; } return 100; };
-  const lo = pct(.01), hi = Math.max(lo + 20, pct(.99)), top = pct(.95);
+  // 黑点只看「接近黑灰」的像素：大片饱和深蓝/深红本来就是那个颜色，不能被当成没拍黑的黑色压下去
+  const hN = new Uint32Array(101); let nN = 0; for (let i = 0; i < N; i++) if (L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2] < 400) { hN[Math.max(0, Math.min(100, Math.round(L[i * 3])))]++; nN++; }
+  let lo = 0; { let acc = 0; for (let v = 0; v <= 100; v++) { acc += hN[v]; if (acc >= .01 * nN) { lo = v; break; } } }
+  lo = Math.min(lo, 20, pct(.01));
+  const hi = Math.max(lo + 20, pct(.99)), top = pct(.95);
   let sa = 0, sb = 0, sn = 0;
   for (let i = 0; i < N; i++) { const l = L[i * 3], a = L[i * 3 + 1], b = L[i * 3 + 2]; if (l >= top && a * a + b * b < 484) { sa += a; sb += b; sn++; } }
   const a0 = sn ? Math.max(-12, Math.min(12, sa / sn)) : 0, b0 = sn ? Math.max(-12, Math.min(12, sb / sn)) : 0, vv = Swap.vivid || 1.1;
@@ -1370,6 +1374,35 @@ function absLabels() {
     }
   }
   out = mergeSmall(out, W, H, Math.round(N * [.0001, .0004, .0009, .0018, .0035][lvl]));
+  // 大面积的底色（背景、天空、纸边）：相近的两支笔不要东一块西一块，整片用一支笔，
+  // 深浅交给后面的「分层罩染」去做，这样明暗是有结构的，不是随机斑块
+  const big = new Uint8Array(N), K2 = Swap.map.length;
+  if (lvl > 0) {
+    const pl = Swap.map.map(m => m.no ? hexLab(penByNo(m.no).hex) : m.c.lab), par = Array.from({length: K2}, (_, i) => i);
+    const fd = i => { while (par[i] !== i) i = par[i] = par[par[i]]; return i; };
+    for (let a = 0; a < K2; a++) for (let b = a + 1; b < K2; b++) if (dE(pl[a], pl[b]) < 15) par[fd(a)] = fd(b);
+    const fam = new Uint8Array(N); for (let i = 0; i < N; i++) fam[i] = fd(out[i]);
+    const cid = new Int32Array(N).fill(-1), st = new Int32Array(N); let nc = 0;
+    for (let s0 = 0; s0 < N; s0++) {
+      if (cid[s0] >= 0) continue;
+      const f = fam[s0], px = []; let sp = 0; st[sp++] = s0; cid[s0] = nc; let edges = 0;
+      while (sp) { const i = st[--sp]; px.push(i); const x = i % W, y = (i / W) | 0; if (x === 0 || y === 0 || x === W - 1 || y === H - 1) edges++;
+        if (x > 0 && cid[i - 1] < 0 && fam[i - 1] === f) { cid[i - 1] = nc; st[sp++] = i - 1; }
+        if (x < W - 1 && cid[i + 1] < 0 && fam[i + 1] === f) { cid[i + 1] = nc; st[sp++] = i + 1; }
+        if (y > 0 && cid[i - W] < 0 && fam[i - W] === f) { cid[i - W] = nc; st[sp++] = i - W; }
+        if (y < H - 1 && cid[i + W] < 0 && fam[i + W] === f) { cid[i + W] = nc; st[sp++] = i + W; } }
+      nc++;
+      if (px.length > N * .25 || (px.length > N * .04 && edges > (W + H) * .5)) {
+        const cnt = new Float64Array(K2); for (const i of px) cnt[out[i]]++;
+        let bk = 0; for (let k = 1; k < K2; k++) if (cnt[k] > cnt[bk]) bk = k;
+        // 只并和主色真的很近的笔（不顺着「浅肉色→白→纸边」这种链一路并过去）
+        const ok = pl.map(c => dE(c, pl[bk]) < 15);
+        for (const i of px) if (ok[out[i]]) { out[i] = bk; dab[i] = bk; big[i] = 1; }
+      }
+    }
+  }
+  for (let i = 0; i < N; i++) if (big[i]) dab[i] = out[i];
+  Swap.cache.big = big;
   Swap.cache.dab = dab;
   return (Swap.cache.abs = out);
 }
@@ -1394,6 +1427,57 @@ function paperTex(W, H) {
    2 笔触：笔头宽度的平行笔道，相邻笔道重叠的地方更深一点
    3 颜料浓淡不均、边缘颜料堆积
    4 纸的凹凸：凸起处受光、凹处颜料挂不上露出一点纸白 */
+/* 分层罩染（水彩的平涂 + 叠色）：大面积底色不跟着照片的噪点走，像在斜放的画板上一层层上水彩——
+   1 量出原画整片底色「哪边亮、哪边暗」的大方向（一个斜面）
+   2 顺着这个方向分成 3 层台阶：先整片铺最浅的一层，干了再从暗的那头叠第二层、第三层，
+     每层的边是笔刷拖出来的略带起伏的直边，层边留一条略深的水痕
+   3 原画里更细的明暗只留一点点，四角再轻轻压暗，把视线留在主体上 */
+function washField(lab, big, Lc, W, H, depth) {
+  if (!big) return null;
+  const N = W * H; let any = 0; for (let i = 0; i < N; i += 7) if (big[i]) { any = 1; break; }
+  if (!any) return null;
+  const v = new Float32Array(N).fill(NaN), rim = new Float32Array(N), q = 4, w4 = Math.ceil(W / q), h4 = Math.ceil(H / q), Ls = new Float32Array(N);
+  const keys = new Set(); for (let i = 0; i < N; i++) if (big[i]) keys.add(lab[i]);
+  const sig = Math.max(W, H) / q / 9, step = 6, sc = Math.max(1, W / 860);
+  for (const k of keys) {
+    const m = new Float32Array(w4 * h4), a = new Float32Array(w4 * h4);
+    for (let i = 0; i < N; i++) if (big[i] && lab[i] === k) { const j = ((i / W / q) | 0) * w4 + (((i % W) / q) | 0); m[j]++; a[j] += Lc[i]; }
+    const mb = gaussBlur(m, w4, h4, sig), ab = gaussBlur(a, w4, h4, sig);
+    // 先求每个点的大尺度明暗，同时拟合一个斜面 L = c + gx·u + gy·w
+    let n = 0, su = 0, sw = 0, sL = 0, suu = 0, sww = 0, suw = 0, suL = 0, swL = 0;
+    for (let y = 0; y < H; y++) {
+      const fy = Math.max(0, Math.min(h4 - 1.001, (y + .5) / q - .5)), y0 = fy | 0, ty = fy - y0, y1 = Math.min(h4 - 1, y0 + 1), w = y / H - .5;
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x; if (!big[i] || lab[i] !== k) continue;
+        const fx = Math.max(0, Math.min(w4 - 1.001, (x + .5) / q - .5)), x0 = fx | 0, tx = fx - x0, x1 = Math.min(w4 - 1, x0 + 1);
+        const bl = (j0, j1) => (ab[j0] * (1 - tx) + ab[j1] * tx) / Math.max(1e-3, mb[j0] * (1 - tx) + mb[j1] * tx);
+        const L = Ls[i] = bl(y0 * w4 + x0, y0 * w4 + x1) * (1 - ty) + bl(y1 * w4 + x0, y1 * w4 + x1) * ty, u = x / W - .5;
+        n++; su += u; sw += w; sL += L; suu += u * u; sww += w * w; suw += u * w; suL += u * L; swL += w * L;
+      }
+    }
+    const mu = su / n, mw = sw / n, mL = sL / n, cuu = suu / n - mu * mu, cww = sww / n - mw * mw, cuw = suw / n - mu * mw, cuL = suL / n - mu * mL, cwL = swL / n - mw * mL, det = cuu * cww - cuw * cuw;
+    let gx = det > 1e-6 ? (cuL * cww - cwL * cuw) / det : 0, gy = det > 1e-6 ? (cwL * cuu - cuL * cuw) / det : 0;
+    // 原画几乎是平的：按习惯上深下浅（天空、背景都这么铺）
+    if (Math.hypot(gx, gy) < 4) { gx = gx * .3; gy = 6; }
+    const gl = Math.hypot(gx, gy), dx = gx / gl, dy = gy / gl;
+    let pmin = 1e9, pmax = -1e9;
+    for (let i = 0; i < N; i++) if (big[i] && lab[i] === k) { const p = (i % W) / W * dx + ((i / W) | 0) / H * dy; if (p < pmin) pmin = p; if (p > pmax) pmax = p; }
+    const span = Math.max(1e-3, pmax - pmin);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x; if (!big[i] || lab[i] !== k) continue;
+      const u = x / W, w = y / H, p = (u * dx + w * dy - pmin) / span, perp = (-u * dy + w * dx) * W / sc;
+      // 0 = 暗的一头，1 = 亮的一头；台阶边用笔刷拖出来的那种轻微起伏
+      const g = (p - .5) * 2 * 8 + n1(perp / 260 + k * 3.1) * 1.3 + n1(perp / 45 + k * 1.7) * .22;
+      const s2 = g / step, fl = Math.floor(s2), fr = s2 - fl, e = fr < .7 ? 0 : fr > .9 ? 1 : (fr - .7) / .2, sm = e * e * (3 - 2 * e);
+      const plane = mL + gx * (u - .5 - mu) + gy * (w - .5 - mw);
+      const fine = Math.max(-5, Math.min(5, (Ls[i] - plane) * depth * .8));
+      const ddx = (u - .5) * 2, ddy = (w - .48) * 2, rr = Math.min(1, Math.hypot(ddx, ddy) / 1.3);
+      v[i] = (fl + sm) * step + fine - 6 * rr * rr * rr + 2;
+      rim[i] = fr > .62 && fr < .78 ? 1 - Math.abs(fr - .7) / .08 : 0;
+    }
+  }
+  return {v, rim};
+}
 /* 两种画风：水彩感（透明、浅、软边、多露纸）和马克笔厚涂（不透明、笔道明显） */
 const STYLES = {
   wc: {alpha: .74, alphaVar: .16, overlap: .02, edge: .06, gran: .75, gap: .1, down: .55, ink: .72, soft: true},
@@ -1413,21 +1497,26 @@ function paintBuf() {
   for (let i = N - 1; i >= 0; i--) { const x = i % W; let v = D[i]; if (x < W - 1) v = Math.min(v, D[i + 1] + 1); if (i + W < N) v = Math.min(v, D[i + W] + 1); D[i] = v; }
   const ang = list.map(c => { const w = c.maxx - c.minx + 1, h = c.maxy - c.miny + 1; return (w >= h * .8 ? 0 : Math.PI / 2) + h1(c.id * 7.3) * .3; });
   const cs = ang.map(Math.cos), sn = ang.map(Math.sin), sc = Math.max(1, W / 860), tip = 9 * sc, out = new Uint8ClampedArray(N * 4);
-  const PT = paperTex(W, H), ph = PT.h, ps = PT.s;
+  const PT = paperTex(W, H), ph = PT.h, ps = PT.s, wash = washField(lab, Swap.cache.big, Lc, W, H, depth);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = y * W + x, ci = comp[i], vp = labP[i], dRaw = (Lc[i] - meanL[vp]) * depth, dL = Math.max(-30, Math.min(30, Math.round(dRaw < 0 ? dRaw * ST.down : dRaw))), c = lut[vp][dL + 30];
+    const i = y * W + x, ci = comp[i], vp = labP[i], wv = wash ? wash.v[i] : NaN, inW = wv === wv;
+    const dRaw = inW ? wv : (Lc[i] - meanL[vp]) * depth, dL = Math.max(-30, Math.min(30, Math.round(dRaw < 0 ? dRaw * ST.down : dRaw))), c = lut[vp][dL + 30];
     const u = x * cs[ci] + y * sn[ci], v = -x * sn[ci] + y * cs[ci];
     // 笔道：每条宽一个笔头，边缘轻微抖动；两条笔道交叠处（t 接近 0）多一层颜料
     const band = v / tip + n1(u / (38 * sc) + ci * 5.3) * .25, t = band - Math.floor(band), overlap = t < .14 ? (1 - t / .14) : 0;
-    const dens = n2(x / (46 * sc) + ci * .7, y / (46 * sc) + 2.3);
-    let f = 1 - ST.overlap * overlap + .03 * dens;
+    const dens = n2(x / (46 * sc) + ci * .7, y / (46 * sc) + 2.3) * (inW ? .25 : 1);
+    let f = 1 - ST.overlap * overlap * (inW ? .4 : 1) + .03 * dens;
+    // 每一层罩染干了以后边上会留一条略深的水痕，这就是层次的「结构线」
+    if (inW) f *= 1 - .05 * wash.rim[i];
     const dd = D[i]; if (dd < 4) f *= 1 - ST.edge * (1 - dd / 4);
     f *= 1 + .07 * ps[i];
     let R = c[0] * f, G = c[1] * f, B = c[2] * f;
     // 水彩是透明的：颜色和纸叠在一起，浓淡不匀；深色笔盖得住一些
     const lum = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255;
     if (ST.alpha < 1) {
-      const al = lum < .25 ? Math.max(.9, Math.min(1, .95 + ST.alphaVar * .25 * dens)) : Math.max(.5, Math.min(1, ST.alpha + ST.alphaVar * dens + (lum < .4 ? .1 : 0)));
+      // 罩染：叠的层数越多（越深）颜色越实，浅的地方薄薄一层透纸
+      const lay = inW ? Math.max(-.12, Math.min(.16, -wv / 60)) : 0;
+      const al = lum < .25 ? Math.max(.9, Math.min(1, .95 + ST.alphaVar * .25 * dens)) : Math.max(.5, Math.min(1, ST.alpha + lay + ST.alphaVar * dens + (lum < .4 ? .1 : 0)));
       R = 250 + (R - 250) * al; G = 249 + (G - 249) * al; B = 244 + (B - 244) * al;
     }
     // 纸纹凹处颜料挂不满，透一点纸白；交界处留一条很细的纸缝

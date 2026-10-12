@@ -1238,13 +1238,24 @@ function analyze(cv, k, detail) {
   for (let i = 0; i < N; i++) { Lraw[i] = L[i * 3]; dark[i] = L[i * 3] < 32 ? 1 : 0; }
   // 只算「细的深色线」：本身是深色，但周围一圈大多不是深色（大片深色的山、剪影不算）
   const darkAround = gaussBlur(dark, W, H, 3 * Math.max(1, W / 860));
+  // 「比周围明显深」也算：蓝天上的深蓝飞鸟、船的桅杆、眼线，不一定是纯黑
+  const sc3 = 3 * Math.max(1, W / 860), Lm = gaussBlur(Lraw, W, H, sc3), rel = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const C2 = L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2]; if (Lm[i] - Lraw[i] > 13 && Lraw[i] < 58 && C2 < 1100) rel[i] = 1; }
+  const relAround = gaussBlur(rel, W, H, sc3);
   let crisp = 0; const thinRaw = new Float32Array(N);
-  for (let i = 0; i < N; i++) { if (dark[i] && darkAround[i] < .45 && L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2] < 400) { thinRaw[i] = 1; if (lines[i] > 100) dl++; } if (lines[i] > 140 && L[i * 3] < 40) crisp++; }
+  for (let i = 0; i < N; i++) {
+    const C2 = L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2];
+    if (dark[i] && darkAround[i] < .45 && C2 < 400) { thinRaw[i] = 1; if (lines[i] > 100) dl++; }
+    else if (rel[i] && relAround[i] < .4) thinRaw[i] = Math.min(1, .55 + (Lm[i] - Lraw[i] - 13) / 20);
+    if (lines[i] > 140 && L[i * 3] < 40) crisp++;
+  }
+  // 去掉孤零零的单个点（纸纹噪点）：周围 3×3 里至少还有 2 个
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = y * W + x; if (!thinRaw[i]) continue; let n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && thinRaw[i + dy * W + dx] > 0) n++; if (n < 2) thinRaw[i] = 0; }
   const thin = gaussBlur(thinRaw, W, H, .6);
   const light = new Float32Array(N);
   for (let i = 0; i < N; i++) light[i] = L[i * 3] > 80 && L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2] < 500 ? 1 : 0;
   const lightAround = gaussBlur(light, W, H, 3 * Math.max(1, W / 860)), glintRaw = new Float32Array(N);
-  for (let i = 0; i < N; i++) if (light[i] && lightAround[i] < .4) glintRaw[i] = 1;
+  for (let i = 0; i < N; i++) if ((light[i] && lightAround[i] < .4) || (Lraw[i] - Lm[i] > 16 && Lraw[i] > 72 && L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2] < 600 && lightAround[i] < .5)) glintRaw[i] = 1;
   const glint = gaussBlur(glintRaw, W, H, .6);
   const Lc = gaussBlur(Lraw, W, H, 1.2);
   return {W, H, centers, labels: lab, lines, Lc, thin, glint, lineRatio: dl / N, crisp: crisp / N};
@@ -1361,14 +1372,21 @@ function absLabels() {
   const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = r.labels, keyOf = [], reps = [], kid = new Map();
   Swap.map.forEach((m, i) => { const k = m.no || ('#' + i); if (!kid.has(k)) { kid.set(k, reps.length); reps.push(i); } keyOf[i] = kid.get(k); });
   const K = reps.length, lvl = Math.max(0, Math.min(4, Swap.detail | 0));
-  let out = new Uint8Array(N); const dab = new Uint8Array(N);
+  let out = new Uint8Array(N); const dab = new Uint8Array(N), mixK = new Uint8Array(N), mixA = new Float32Array(N);
   if (lvl === 0) { for (let i = 0; i < N; i++) dab[i] = out[i] = reps[keyOf[lab[i]]]; }
   else {
     const sig = [0, 1.1, 2, 3.2, 5][lvl], w2 = Math.ceil(W / 2), h2 = Math.ceil(H / 2), maps = [];
     for (let k = 0; k < K; k++) maps.push(new Float32Array(w2 * h2));
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) maps[keyOf[lab[y * W + x]]][(y >> 1) * w2 + (x >> 1)] += .25;
     const used = maps.map(m => m.some(v => v > 0));
-    for (let k = 0; k < K; k++) if (used[k]) maps[k] = gaussBlur(maps[k], w2, h2, sig);
+    // 平的地方（原画里没有明显轮廓线）用大得多的半径抹，色块交界变成顺的大形，不是照片噪点那样的碎边；
+    // 有细节的地方（轮廓线密）保持原来的小半径
+    const busy = new Float32Array(w2 * h2), LNs = r.lines;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (LNs[y * W + x] > 60) busy[(y >> 1) * w2 + (x >> 1)] = 1;
+    const bz = gaussBlur(busy, w2, h2, 9), wFlat = new Float32Array(w2 * h2);
+    for (let j = 0; j < w2 * h2; j++) { const t = Math.max(0, Math.min(1, (bz[j] - .015) / .06)); wFlat[j] = 1 - t * t * (3 - 2 * t); }
+    const bigSig = sig + 4.5;
+    for (let k = 0; k < K; k++) if (used[k]) { const sm = gaussBlur(maps[k], w2, h2, sig), lg = gaussBlur(maps[k], w2, h2, bigSig); for (let j = 0; j < w2 * h2; j++) sm[j] += (lg[j] - sm[j]) * wFlat[j]; maps[k] = sm; }
     for (let y = 0; y < H; y++) {
       const fy = Math.max(0, Math.min(h2 - 1.001, (y + .5) / 2 - .5)), y0 = Math.floor(fy), ty = fy - y0, y1 = Math.min(h2 - 1, y0 + 1);
       for (let x = 0; x < W; x++) {
@@ -1376,9 +1394,12 @@ function absLabels() {
         let bk = 0, bv = -1, sk = 0, sv = -1;
         for (let k = 0; k < K; k++) { if (!used[k]) continue; const m = maps[k], v = (m[y0 * w2 + x0] * (1 - tx) + m[y0 * w2 + x1] * tx) * (1 - ty) + (m[y1 * w2 + x0] * (1 - tx) + m[y1 * w2 + x1] * tx) * ty; if (v > bv) { sv = bv; sk = bk; bv = v; bk = k; } else if (v > sv) { sv = v; sk = k; } }
         out[y * W + x] = reps[bk];
-        // 两种颜色交界的地方像马克笔点涂那样互相咬进去，不是一条硬线
+        const wf = wFlat[(y >> 1) * w2 + (x >> 1)];
+        // 平的地方：两种颜色像水彩湿画那样互相晕开（记下第二支笔和混的比例），不是一条硬边
+        if (sv > 0 && wf > .05) { const q = sv / (bv + sv), e = Math.max(0, Math.min(1, (q - .08) / .42)); mixK[y * W + x] = reps[sk]; mixA[y * W + x] = .5 * e * e * (3 - 2 * e) * wf; }
+        // 有细节的地方：两种颜色交界像马克笔点涂那样互相咬进去
         let dk = bk;
-        if (sv > 0 && bv - sv < .24) { const t = n2(x / 3.4 + 11.3, y / 3.4 + 5.1) * .5 + .5; if (bv - sv < .24 * t) dk = sk; }
+        if (wf < .5 && sv > 0 && bv - sv < .24) { const t = n2(x / 3.4 + 11.3, y / 3.4 + 5.1) * .5 + .5; if (bv - sv < .24 * t) dk = sk; }
         dab[y * W + x] = reps[dk];
       }
     }
@@ -1412,7 +1433,22 @@ function absLabels() {
       }
     }
   }
-  for (let i = 0; i < N; i++) if (big[i]) dab[i] = out[i];
+  // 小而显眼的颜色（蓝眼珠、嘴唇、耳钉、小红花）：抽象时容易被旁边的大色块吃掉，这里放回来
+  if (lvl > 0) {
+    const pl = Swap.map.map(m => m.no ? hexLab(penByNo(m.no).hex) : m.c.lab), cm = new Uint8Array(N), org = new Uint8Array(N);
+    for (let i = 0; i < N; i++) { const o = reps[keyOf[lab[i]]]; org[i] = o; if (o !== out[i] && dE(pl[o], pl[out[i]]) > 22 && Math.hypot(pl[o][1], pl[o][2]) > 16) cm[i] = 1; }
+    const ii = new Int32Array((W + 1) * (H + 1));
+    for (let y = 0; y < H; y++) { let rs = 0; for (let x = 0; x < W; x++) { rs += cm[y * W + x]; ii[(y + 1) * (W + 1) + x + 1] = ii[y * (W + 1) + x + 1] + rs; } }
+    const R2 = 2;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x; if (!cm[i]) continue;
+      const x0 = Math.max(0, x - R2), x1 = Math.min(W, x + R2 + 1), y0 = Math.max(0, y - R2), y1 = Math.min(H, y + R2 + 1);
+      const sum = ii[y1 * (W + 1) + x1] - ii[y0 * (W + 1) + x1] - ii[y1 * (W + 1) + x0] + ii[y0 * (W + 1) + x0];
+      if (sum >= (x1 - x0) * (y1 - y0) * .5) { out[i] = dab[i] = org[i]; mixA[i] = 0; big[i] = 0; }
+    }
+  }
+  for (let i = 0; i < N; i++) if (big[i]) { dab[i] = out[i]; mixA[i] = 0; }
+  Swap.cache.mixK = mixK; Swap.cache.mixA = mixA;
   Swap.cache.big = big;
   Swap.cache.dab = dab;
   return (Swap.cache.abs = out);
@@ -1459,9 +1495,26 @@ function lightField() {
   const m = Math.min(w2, h2), RG = m * .14;
   const sm = gaussBlur(Float32Array.from(sub), w2, h2, RG * .18), form = new Uint8Array(n2_);
   for (let j = 0; j < n2_; j++) form[j] = hasBg && sub[j] && sm[j] > .5 ? 1 : 0;
+  // 只有「一个完整的物体」才做体积：被底色围住（不碰画面边）、不太大也不太碎。
+  // 整张画卡、贴边的天空、大片头发这种不是物体，不鼓
+  const fc = new Int32Array(n2_).fill(-1), comps = [], stk = new Int32Array(n2_);
+  for (let s0 = 0; s0 < n2_; s0++) {
+    if (!form[s0] || fc[s0] >= 0) continue;
+    const id = comps.length, c = {area: 0, edge: 0}; let sp = 0; stk[sp++] = s0; fc[s0] = id;
+    while (sp) { const j = stk[--sp], x = j % w2, y = (j / w2) | 0; c.area++; if (x === 0 || y === 0 || x === w2 - 1 || y === h2 - 1) c.edge++;
+      if (x > 0 && form[j - 1] && fc[j - 1] < 0) { fc[j - 1] = id; stk[sp++] = j - 1; }
+      if (x < w2 - 1 && form[j + 1] && fc[j + 1] < 0) { fc[j + 1] = id; stk[sp++] = j + 1; }
+      if (y > 0 && form[j - w2] && fc[j - w2] < 0) { fc[j - w2] = id; stk[sp++] = j - w2; }
+      if (y < h2 - 1 && form[j + w2] && fc[j + w2] < 0) { fc[j + w2] = id; stk[sp++] = j + w2; } }
+    c.ok = c.area > n2_ * .004 && c.area < n2_ * .22 && c.edge < (w2 + h2) * .04;
+    comps.push(c);
+  }
+  for (let j = 0; j < n2_; j++) if (form[j] && !comps[fc[j]].ok) form[j] = 0;
   const dG = dist(j => !form[j]);
+  // 每个物体按自己的大小鼓：小物体鼓得小，大物体最多鼓到 RG
+  const mxD = new Float32Array(comps.length); for (let j = 0; j < n2_; j++) if (form[j] && dG[j] > mxD[fc[j]]) mxD[fc[j]] = dG[j];
   let h = new Float32Array(n2_);
-  for (let j = 0; j < n2_; j++) { if (!form[j]) continue; const t = Math.min(dG[j], RG) / RG; h[j] = RG * (1 - (1 - t) * (1 - t)); }
+  for (let j = 0; j < n2_; j++) { if (!form[j]) continue; const R = Math.max(2, Math.min(RG, mxD[fc[j]] * .85)), t = Math.min(dG[j], R) / R; h[j] = R * (1 - (1 - t) * (1 - t)); }
   h = gaussBlur(h, w2, h2, Math.max(1.6, RG * .1));
   const nx = new Float32Array(n2_), ny = new Float32Array(n2_);
   for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) { const j = y * w2 + x; if (!form[j]) continue; const hx = (h[Math.min(n2_ - 1, j + (x < w2 - 1 ? 1 : 0))] - h[j - (x > 0 ? 1 : 0)]) / 2, hy = (h[j + (y < h2 - 1 ? w2 : 0)] - h[j - (y > 0 ? w2 : 0)]) / 2, l = Math.hypot(hx, hy, 1); nx[j] = -hx / l; ny[j] = -hy / l; }
@@ -1482,16 +1535,16 @@ function lightField() {
   const tone = new Float32Array(n2_), core = new Float32Array(n2_);
   for (let j = 0; j < n2_; j++) {
     if (!form[j]) continue;
-    const s2 = lamOf(lx, ly, j) / .35, lit = sst(.12, .3, s2), sh = sst(-.08, -.26, s2);
+    const s2 = lamOf(lx, ly, j) / .35, lit = sst(.1, .36, s2), sh = sst(-.04, -.34, s2);
     const refl = sh * (hasBg ? (1 - sst(0, RG * .2, dG[j])) * .45 : 0);
-    tone[j] = lit - sh + refl; core[j] = sh * (1 - sst(-.26, -.6, s2)) * (1 - refl * 2);
+    tone[j] = lit - sh * .85 + refl; core[j] = sh * (1 - sst(-.3, -.7, s2)) * (1 - refl * 2) * .7;
   }
   // 投影：主体往背光的方向挪一点、糊开，落在背景上；贴着主体的地方再暗一圈
   const cast = new Float32Array(n2_);
   if (hasBg) {
     const ox = Math.round(-lx * RG * .32), oy = Math.round(-ly * RG * .32), sh = new Float32Array(n2_);
-    for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) { const sx = x - ox, sy = y - oy; if (sx >= 0 && sy >= 0 && sx < w2 && sy < h2 && sub[sy * w2 + sx]) sh[y * w2 + x] = 1; }
-    const a = gaussBlur(sh, w2, h2, RG * .16), ao = gaussBlur(sub.map ? Float32Array.from(sub) : sub, w2, h2, RG * .06);
+    for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) { const sx = x - ox, sy = y - oy; if (sx >= 0 && sy >= 0 && sx < w2 && sy < h2 && form[sy * w2 + sx]) sh[y * w2 + x] = 1; }
+    const a = gaussBlur(sh, w2, h2, RG * .16), ao = gaussBlur(Float32Array.from(form), w2, h2, RG * .06);
     // 天空不接影子：靠上、贴着上边的大底色当天空，云和山不往天上投影
     const cy = new Float64Array(256), cn = new Float64Array(256), top = new Uint8Array(256);
     for (let j = 0; j < n2_; j++) if (!sub[j]) { cy[lb[j]] += (j / w2 | 0) / h2; cn[lb[j]]++; if (j < w2) top[lb[j]] = 1; }
@@ -1507,7 +1560,8 @@ function lightField() {
       for (let x = 0; x < W; x++) { const fx = Math.max(0, Math.min(w2 - 1.001, x / 2)), x0 = fx | 0, tx = fx - x0, x1 = Math.min(w2 - 1, x0 + 1);
         o[y * W + x] = (src[y0 * w2 + x0] * (1 - tx) + src[y0 * w2 + x1] * tx) * (1 - ty) + (src[y1 * w2 + x0] * (1 - tx) + src[y1 * w2 + x1] * tx) * ty; } }
     return o; };
-  return (Swap.cache.lf = {tone: up(tone), core: up(core), cast: up(cast), lx, ly, hasBg});
+  let anyForm = 0; for (let j = 0; j < n2_; j++) if (form[j]) { anyForm = 1; break; }
+  return (Swap.cache.lf = {tone: up(tone), core: up(core), cast: up(cast), lx, ly, hasBg: hasBg && !!anyForm});
 }
 /* 分层罩染（水彩的平涂 + 叠色）：大面积底色不跟着照片的噪点走，像在斜放的画板上一层层上水彩——
    1 量出原画整片底色「哪边亮、哪边暗」的大方向（一个斜面）
@@ -1541,7 +1595,11 @@ function washField(lab, big, Lc, W, H, depth, LF) {
     let gx = det > 1e-6 ? (cuL * cww - cwL * cuw) / det : 0, gy = det > 1e-6 ? (cwL * cuu - cuL * cuw) / det : 0;
     // 底色的深浅方向跟着定好的光走：靠光的那头浅，离光远的那头深（原图的斜面只用来算细的起伏）
     const fgx = gx, fgy = gy;
-    if (LF) { gx = LF.lx; gy = LF.ly; } else if (Math.hypot(gx, gy) < 4) { gx = gx * .3; gy = 6; }
+    // 天空（贴着上边、在画面上半部）照画家的习惯：上面深、往地平线越来越浅；其他大底色跟着光走
+    let skyTop = false, cyS = 0, bx0 = W, bx1 = 0, by0 = H, by1 = 0; { let cnS = 0; for (let i = 0; i < N; i += 3) if (big[i] && lab[i] === k) { const yy = i / W | 0, xx = i % W; cyS += yy / H; cnS++; if (i < W * 2) skyTop = true; if (xx < bx0) bx0 = xx; if (xx > bx1) bx1 = xx; if (yy < by0) by0 = yy; if (yy > by1) by1 = yy; } cyS /= Math.max(1, cnS); }
+    // 又宽又扁的一条（天边、海面、草地）也按横向分层：上半部越往下越浅，下半部越往近处越深
+    const flatBand = (bx1 - bx0) > (by1 - by0) * 1.4;
+    if ((skyTop && cyS < .45) || (flatBand && cyS < .5)) { gx = 0; gy = 1; } else if (flatBand) { gx = 0; gy = -1; } else if (LF) { gx = LF.lx; gy = LF.ly; } else if (Math.hypot(gx, gy) < 4) { gx = gx * .3; gy = 6; }
     const gl = Math.hypot(gx, gy), dx = gx / gl, dy = gy / gl;
     let pmin = 1e9, pmax = -1e9;
     for (let i = 0; i < N; i++) if (big[i] && lab[i] === k) { const p = (i % W) / W * dx + ((i / W) | 0) / H * dy; if (p < pmin) pmin = p; if (p > pmax) pmax = p; }
@@ -1572,7 +1630,8 @@ function paintBuf() {
   const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = absLabels(), labP = Swap.cache.dab || lab, {comp, list} = regionInfo(), Lc = r.Lc;
   const K = Swap.map.length, sumL = new Float64Array(K), cnt = new Float64Array(K), depth = Swap.depth == null ? .7 : Swap.depth;
   for (let i = 0; i < N; i++) { sumL[labP[i]] += Lc[i]; cnt[labP[i]]++; }
-  const lut = Swap.map.map((m) => { const p = m.no ? penByNo(m.no) : null, pl = p ? hexLab(p.hex) : m.c.lab, t = []; for (let k = -30; k <= 30; k++) t.push(lab2rgb(Math.max(0, Math.min(100, pl[0] + k)), pl[1], pl[2])); return t; });
+  // 白和很浅的颜色压暗时不要变灰变黄：水彩里白的阴影是一层淡淡的蓝紫
+  const lut = Swap.map.map((m) => { const p = m.no ? penByNo(m.no) : null, pl = p ? hexLab(p.hex) : m.c.lab, t = [], cool = pl[0] > 78 && Math.hypot(pl[1], pl[2]) < 16 ? Math.min(1, (pl[0] - 78) / 10) : 0; for (let k = -30; k <= 30; k++) t.push(lab2rgb(Math.max(0, Math.min(100, pl[0] + k)), pl[1] + (k < 0 ? -k * .1 * cool : 0), pl[2] + (k < 0 ? k * .45 * cool : 0))); return t; });
   const meanL = Array.from(sumL, (v, k) => cnt[k] ? v / cnt[k] : 50);
   const D = new Uint8Array(N).fill(8);
   for (let i = 0; i < N; i++) { const x = i % W; if ((x > 0 && lab[i - 1] !== lab[i]) || (x < W - 1 && lab[i + 1] !== lab[i]) || (i >= W && lab[i - W] !== lab[i]) || (i + W < N && lab[i + W] !== lab[i])) D[i] = 0; }
@@ -1580,12 +1639,13 @@ function paintBuf() {
   for (let i = N - 1; i >= 0; i--) { const x = i % W; let v = D[i]; if (x < W - 1) v = Math.min(v, D[i + 1] + 1); if (i + W < N) v = Math.min(v, D[i + W] + 1); D[i] = v; }
   const ang = list.map(c => { const w = c.maxx - c.minx + 1, h = c.maxy - c.miny + 1; return (w >= h * .8 ? 0 : Math.PI / 2) + h1(c.id * 7.3) * .3; });
   const cs = ang.map(Math.cos), sn = ang.map(Math.sin), sc = Math.max(1, W / 860), tip = 9 * sc, out = new Uint8ClampedArray(N * 4);
-  const PT = paperTex(W, H), ph = PT.h, ps = PT.s, LF = lightField(), wash = washField(lab, Swap.cache.big, Lc, W, H, depth, LF);
+  const PT = paperTex(W, H), ph = PT.h, ps = PT.s, LF = lightField(), mixK = Swap.cache.mixK, mixA = Swap.cache.mixA, wash = washField(lab, Swap.cache.big, Lc, W, H, depth, LF);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x, ci = comp[i], vp = labP[i], wv = wash ? wash.v[i] : NaN, inW = wv === wv;
     // 主体：原图的明暗只留一半当细节，体积感交给定好的光；背景：分层罩染 + 投影
     const tn = LF.tone[i], cr = LF.core[i], cs = LF.cast[i];
-    const dRaw = inW ? wv - cs * 16 * (.5 + depth * .7) : (Lc[i] - meanL[vp]) * depth * (LF.hasBg ? .55 : 1) + (tn * (tn > 0 ? 8 : 13) - cr * 7) * (.4 + depth * .9), dL = Math.max(-30, Math.min(30, Math.round(dRaw < 0 ? dRaw * ST.down : dRaw))), c = lut[vp][dL + 30];
+    const ma = mixA ? mixA[i] : 0;
+    const dRaw = inW ? wv - cs * 16 * (.5 + depth * .7) : (Lc[i] - (ma > .02 ? meanL[vp] + (meanL[mixK[i]] - meanL[vp]) * ma : meanL[vp])) * depth * (LF.hasBg ? .55 : 1) + (tn * (tn > 0 ? 8 : 13) - cr * 7) * (.4 + depth * .9), dL = Math.max(-30, Math.min(30, Math.round(dRaw < 0 ? dRaw * ST.down : dRaw))), c0 = lut[vp][dL + 30], c = ma > .02 ? (() => { const c2 = lut[mixK[i]][dL + 30]; return [c0[0] + (c2[0] - c0[0]) * ma, c0[1] + (c2[1] - c0[1]) * ma, c0[2] + (c2[2] - c0[2]) * ma]; })() : c0;
     const u = x * cs[ci] + y * sn[ci], v = -x * sn[ci] + y * cs[ci];
     // 笔道：每条宽一个笔头，边缘轻微抖动；两条笔道交叠处（t 接近 0）多一层颜料
     const band = v / tip + n1(u / (38 * sc) + ci * 5.3) * .25, t = band - Math.floor(band), overlap = t < .14 ? (1 - t / .14) : 0;
@@ -1593,7 +1653,7 @@ function paintBuf() {
     let f = 1 - ST.overlap * overlap * (inW ? .4 : 1) + .03 * dens;
     // 每一层罩染干了以后边上会留一条略深的水痕，这就是层次的「结构线」
     if (inW) f *= 1 - .05 * wash.rim[i];
-    const dd = D[i]; if (dd < 4) f *= 1 - ST.edge * (1 - dd / 4);
+    const dd = D[i], hard = Math.max(0, 1 - ma * 2.4); if (dd < 4) f *= 1 - ST.edge * hard * (1 - dd / 4);
     f *= 1 + .07 * ps[i];
     // 冷暖：受光面带一点暖黄，背光面和投影里罩一点蓝紫
     const tw = (inW ? -cs : tn - cr * .5) * (.4 + depth * .6);
@@ -1603,25 +1663,27 @@ function paintBuf() {
     if (ST.alpha < 1) {
       // 罩染：叠的层数越多（越深）颜色越实，浅的地方薄薄一层透纸
       const lay = inW ? Math.max(-.12, Math.min(.16, -wv / 60)) : 0;
-      const al = lum < .25 ? Math.max(.9, Math.min(1, .95 + ST.alphaVar * .25 * dens)) : Math.max(.5, Math.min(1, ST.alpha + lay + ST.alphaVar * dens + (lum < .4 ? .1 : 0)));
+      // 很浅的颜色（肤色、浅粉、浅蓝）本来就淡，再透明就成白纸了：浅色反而要涂实一点
+      const al = lum < .25 ? Math.max(.9, Math.min(1, .95 + ST.alphaVar * .25 * dens)) : Math.max(lum > .72 ? .9 : .5, Math.min(1, ST.alpha + lay + ST.alphaVar * dens + (lum < .4 ? .1 : 0) + Math.max(0, lum - .6) * .6));
       R = 250 + (R - 250) * al; G = 249 + (G - 249) * al; B = 244 + (B - 244) * al;
     }
     // 纸纹凹处颜料挂不满，透一点纸白；交界处留一条很细的纸缝
     let paper = ph[i] < -.3 ? (-ph[i] - .3) * ST.gran * Math.max(.12, Math.min(1, lum / .45)) : 0;
-    if (dd === 0) paper = Math.max(paper, ST.gap + Math.max(0, -ph[i]) * .22);
+    if (dd === 0 && hard > .5) paper = Math.max(paper, (ST.gap + Math.max(0, -ph[i]) * .22) * hard);
     if (paper > 0) { R += (250 - R) * paper; G += (249 - G) * paper; B += (244 - B) * paper; }
-    // 原画里细的深色笔画（气球线、小船、气泡边）抽象时会被抹掉，用细头深色笔补回来
-    const th = r.thin ? r.thin[i] : 0;
-    if (th > .06) { const a = Math.min(1, th * 1.7) * ST.ink; R += (30 - R) * a; G += (28 - G) * a; B += (34 - B) * a; }
-    // 小的高光（气泡、水面闪光、亮边）最后用白笔点回来
-    const gl = r.glint ? r.glint[i] : 0;
-    if (gl > .08) { const a = Math.min(1, gl * 1.6) * .9; R += (252 - R) * a; G += (251 - G) * a; B += (247 - B) * a; }
     out[i * 4] = R; out[i * 4 + 1] = G; out[i * 4 + 2] = B; out[i * 4 + 3] = 255;
   }
   // 水彩的边是软的：交界处颜色互相晕开一点，块面里也略微柔一点
   if (ST.soft) {
     const bl = boxBlur(boxBlur(out, W, H, 1), W, H, 1);
     for (let i = 0; i < N; i++) { const k = D[i] < 3 ? .6 : .22; for (let ch = 0; ch < 3; ch++) out[i * 4 + ch] += (bl[i * 4 + ch] - out[i * 4 + ch]) * k; }
+  }
+  // 细节最后上，不跟着晕开：原画里细的深色笔画（飞鸟、眼睛、船、字、气球线）用细头深色笔补回来，
+  // 小高光（气泡、水面闪光、眼里的光）用白笔点回来
+  for (let i = 0; i < N; i++) {
+    const th = r.thin ? r.thin[i] : 0, gl = r.glint ? r.glint[i] : 0;
+    if (th > .05) { const a = Math.min(1, th * 2) * Math.max(ST.ink, .86), o = i * 4; out[o] += (30 - out[o]) * a; out[o + 1] += (28 - out[o + 1]) * a; out[o + 2] += (36 - out[o + 2]) * a; }
+    if (gl > .08) { const a = Math.min(1, gl * 1.6) * .92, o = i * 4; out[o] += (252 - out[o]) * a; out[o + 1] += (251 - out[o + 1]) * a; out[o + 2] += (247 - out[o + 2]) * a; }
   }
   return (Swap.cache.pb = out);
 }

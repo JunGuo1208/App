@@ -536,7 +536,10 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
             <button type="button" data-view="compare" aria-pressed="false">对比</button>
             <button type="button" data-view="sketch" aria-pressed="false">画稿</button>
           </div>
-          <label class="check" id="lineOnWrap"><input type="checkbox" id="lineOn" checked> 叠加勾线</label>
+          <span class="row" id="lineOnWrap" style="gap:8px 12px">
+            <span class="pills" role="group" aria-label="画风" id="pStyle"><button type="button" data-ps="wc" aria-pressed="true">水彩感</button><button type="button" data-ps="flat" aria-pressed="false">平涂</button></span>
+            <label class="check"><input type="checkbox" id="lineOn"> 叠加勾线</label>
+          </span>
           <span class="hint" id="viewHint">点图上任意一处，看最接近的是哪支笔</span>
         </div>
         <div class="cv-wrap" id="cvWrap">
@@ -563,7 +566,8 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           <p class="hint" id="fidHint" hidden></p>
           <details class="adj" id="adj"><summary><span>调整</span><b id="adjSum">10 色 · 简化 1 · 原色</b></summary><div>
           <div class="ctl"><label for="nIn">颜色数</label><input type="range" id="nIn" min="4" max="28" value="16"><output id="nOut" for="nIn">16</output></div>
-          <div class="ctl" id="detailCtl"><label for="detIn">简化</label><input type="range" id="detIn" min="0" max="4" value="0"><output id="detOut" for="detIn">0</output></div>
+          <div class="ctl" id="detailCtl"><label for="detIn">抽象度</label><input type="range" id="detIn" min="0" max="4" value="2"><output id="detOut" for="detIn">2</output></div>
+          <div class="ctl"><label for="vivIn">鲜艳度</label><input type="range" id="vivIn" min="100" max="170" step="5" value="130"><output id="vivOut" for="vivIn">130</output></div>
           <div class="style-row"><span class="label">风格</span>
             <div class="pills" role="group" aria-label="风格" id="styleP">
               <button type="button" data-style="" aria-pressed="true">原色</button>
@@ -1166,9 +1170,17 @@ function analyze(cv, k, detail) {
   const W = cv.width, H = cv.height;
   let d = cv.getContext('2d').getImageData(0, 0, W, H).data;
   const lines = lineArt(d, W, H);
-  if (detail > 0) { d = boxBlur(d, W, H, Math.min(3, detail)); if (detail > 2) d = boxBlur(d, W, H, 1); }
+  d = boxBlur(d, W, H, 1);
   const N = W * H, L = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) { const l = rgb2lab(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]); L[i * 3] = l[0]; L[i * 3 + 1] = l[1]; L[i * 3 + 2] = l[2]; }
+  // 拍出来的画总是偏灰偏暗：把纸校成白的，拉开明暗，再把颜色提鲜，这样才对得上真正用的那支笔
+  const hist = new Uint32Array(101); for (let i = 0; i < N; i++) hist[Math.max(0, Math.min(100, Math.round(L[i * 3])))]++;
+  const pct = q => { let acc = 0; for (let v = 0; v <= 100; v++) { acc += hist[v]; if (acc >= q * N) return v; } return 100; };
+  const lo = pct(.01), hi = Math.max(lo + 20, pct(.99)), top = pct(.95);
+  let sa = 0, sb = 0, sn = 0;
+  for (let i = 0; i < N; i++) { const l = L[i * 3], a = L[i * 3 + 1], b = L[i * 3 + 2]; if (l >= top && a * a + b * b < 484) { sa += a; sb += b; sn++; } }
+  const a0 = sn ? Math.max(-12, Math.min(12, sa / sn)) : 0, b0 = sn ? Math.max(-12, Math.min(12, sb / sn)) : 0, vv = Swap.vivid || 1.3;
+  for (let i = 0; i < N; i++) { L[i * 3] = Math.max(0, Math.min(100, 3 + (L[i * 3] - lo) * 95 / (hi - lo))); L[i * 3 + 1] = (L[i * 3 + 1] - a0) * vv; L[i * 3 + 2] = (L[i * 3 + 2] - b0) * vv; }
   const rnd = mulberry(1234), step = Math.max(1, Math.floor(N / 30000)), S = [];
   for (let i = 0; i < N; i += step) S.push(i);
   const C = [], first = S[Math.floor(rnd() * S.length)];
@@ -1191,10 +1203,8 @@ function analyze(cv, k, detail) {
   }
   let lab = new Uint8Array(N);
   for (let i = 0; i < N; i++) { let bi = 0, bd = Infinity; for (let c = 0; c < K; c++) { const e = (L[i * 3] - C[c][0]) ** 2 + (L[i * 3 + 1] - C[c][1]) ** 2 + (L[i * 3 + 2] - C[c][2]) ** 2; if (e < bd) { bd = e; bi = c; } } lab[i] = bi; }
-  const passes = detail > 0 ? 1 + Math.min(2, detail) : 1;
-  for (let p = 0; p < passes; p++) lab = majority(lab, W, H, K);
-  const minArea = Math.round(N * [0.00012, 0.0005, 0.0012, 0.0024, 0.004][Math.max(0, Math.min(4, detail))]);
-  lab = mergeSmall(lab, W, H, minArea);
+  lab = majority(lab, W, H, K);
+  lab = mergeSmall(lab, W, H, Math.round(N * .00012));
   const cnt = new Float64Array(K); for (let i = 0; i < N; i++) cnt[lab[i]]++;
   const centers = C.map((c, i) => { const rgb = lab2rgb(c[0], c[1], c[2]); return {lab: c, hex: rgb2hex(rgb[0], rgb[1], rgb[2]), share: cnt[i] / N, i}; });
   return {W, H, centers, labels: lab, lines};
@@ -1230,7 +1240,7 @@ function mergeSmall(lab, W, H, minArea) {
 
 /* ================= 换色状态 ================= */
 const Swap = {
-  work: null, kind: 'art', demo: true, n: 16, detail: 0, lineOn: true, split: .5, skFill: .35, skLab: 'num', ai: null, procMode: 'auto', cropped: false, onlyHave: true, view: 'pens',
+  work: null, kind: 'art', demo: true, n: 14, detail: 2, vivid: 1.3, paintStyle: 'wc', lineOn: false, split: .5, skFill: .35, skLab: 'num', ai: null, procMode: 'auto', cropped: false, onlyHave: true, view: 'pens',
   res: null, map: [], ov: [], extra: [], itemId: null, share: null, pick: null, cache: {}, style: '', styleSet: null, mood: 'sunny', step: 0,
   rematch() { if (this.res) { this.match(); render(); renderSwapList(); } }
 };
@@ -1260,14 +1270,14 @@ function setKind(k, silent) {
   $('#dropSub').textContent = k === 'photo' ? '风景、宠物、食物都行。会简化成色块，再配上你的笔，生成一张数字油画式的画稿' : '小红书里长按保存图片 / 截图都行，电脑上可以直接粘贴';
   $('#shareField').hidden = k !== 'art';
   if (!silent) {
-    const det = k === 'photo' ? 2 : 0, n = k === 'photo' ? 14 : 16;
+    const det = k === 'photo' ? 3 : 2, n = k === 'photo' ? 12 : 14;
     Swap.detail = det; $('#detIn').value = det; $('#detOut').value = det;
     Swap.n = n; $('#nIn').value = n; $('#nOut').value = n;
     if (k === 'photo' && Swap.view === 'orig') setView('sketch');
     if (Swap.work && !Swap.demo) runAnalyze();
   }
 }
-function adjSum() { const el = $('#adjSum'); if (el) el.textContent = Swap.n + ' 色 · 简化 ' + Swap.detail + ' · ' + (Swap.style ? MOODS[Swap.style].name : '原色'); }
+function adjSum() { const el = $('#adjSum'); if (el) el.textContent = Swap.n + ' 色 · 抽象 ' + Swap.detail + ' · 鲜艳 ' + Math.round((Swap.vivid || 1.3) * 100) + ' · ' + (Swap.style ? MOODS[Swap.style].name : '原色'); }
 function setStyle(st, silent) {
   Swap.style = st || '';
   Swap.styleSet = st && MOODS[st] ? moodPens(st).nos : null;
@@ -1295,22 +1305,83 @@ async function runAnalyze() {
 Swap.match = function () {
   const r = this.res; if (!r) return;
   this.map = r.centers.map(c => {
-    const rank = rankPens(c.lab, this.onlyHave, 6);
+    const Cc = Math.hypot(c.lab[1], c.lab[2]);
+    const rank = rankPens(c.lab, this.onlyHave, 14).map(r => { const pl = hexLab(r.p.hex); return {p: r.p, d: r.d, s: r.d + Math.max(0, Cc - Math.hypot(pl[1], pl[2]) - 8) * .3}; }).sort((a, b) => a.s - b.s).slice(0, 6);
     let no = rank[0] ? rank[0].p.no : null;
     const o = this.ov.find(v => dE(hexLab(v.s), c.lab) < 8);
     if (o) no = o.no;
     return {c, rank, no};
   });
-  this.cache.sk = null; this.cache.ol = null;
+  this.cache = {};
 };
+/* 抽象：每支笔的区域各自模糊一下再取最大，边界变成顺滑的大形，碎点没了 */
+function absLabels() {
+  if (Swap.cache.abs) return Swap.cache.abs;
+  const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = r.labels, keyOf = [], reps = [], kid = new Map();
+  Swap.map.forEach((m, i) => { const k = m.no || ('#' + i); if (!kid.has(k)) { kid.set(k, reps.length); reps.push(i); } keyOf[i] = kid.get(k); });
+  const K = reps.length, lvl = Math.max(0, Math.min(4, Swap.detail | 0));
+  let out = new Uint8Array(N);
+  if (lvl === 0) { for (let i = 0; i < N; i++) out[i] = reps[keyOf[lab[i]]]; }
+  else {
+    const sig = [0, 1.1, 2, 3.2, 5][lvl], w2 = Math.ceil(W / 2), h2 = Math.ceil(H / 2), maps = [];
+    for (let k = 0; k < K; k++) maps.push(new Float32Array(w2 * h2));
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) maps[keyOf[lab[y * W + x]]][(y >> 1) * w2 + (x >> 1)] += .25;
+    const used = maps.map(m => m.some(v => v > 0));
+    for (let k = 0; k < K; k++) if (used[k]) maps[k] = gaussBlur(maps[k], w2, h2, sig);
+    for (let y = 0; y < H; y++) {
+      const fy = Math.max(0, Math.min(h2 - 1.001, (y + .5) / 2 - .5)), y0 = Math.floor(fy), ty = fy - y0, y1 = Math.min(h2 - 1, y0 + 1);
+      for (let x = 0; x < W; x++) {
+        const fx = Math.max(0, Math.min(w2 - 1.001, (x + .5) / 2 - .5)), x0 = Math.floor(fx), tx = fx - x0, x1 = Math.min(w2 - 1, x0 + 1);
+        let bk = 0, bv = -1;
+        for (let k = 0; k < K; k++) { if (!used[k]) continue; const m = maps[k], v = (m[y0 * w2 + x0] * (1 - tx) + m[y0 * w2 + x1] * tx) * (1 - ty) + (m[y1 * w2 + x0] * (1 - tx) + m[y1 * w2 + x1] * tx) * ty; if (v > bv) { bv = v; bk = k; } }
+        out[y * W + x] = reps[bk];
+      }
+    }
+  }
+  out = mergeSmall(out, W, H, Math.round(N * [.0001, .0004, .0009, .0018, .0035][lvl]));
+  return (Swap.cache.abs = out);
+}
+/* 马克笔水彩感：顺着块面方向的笔触纹、边缘颜料堆积、局部晕开变浅、偶尔留白缝、纸纹 */
+const GR = {n: 0, a: null};
+function grain(N) { if (GR.n !== N) { const a = new Float32Array(N), rnd = mulberry(77); for (let i = 0; i < N; i++) a[i] = rnd() * 2 - 1; GR.n = N; GR.a = a; } return GR.a; }
+function h1(i) { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return (v - Math.floor(v)) * 2 - 1; }
+function n1(x) { const i = Math.floor(x), f = x - i, t = f * f * (3 - 2 * f), a = h1(i); return a + (h1(i + 1) - a) * t; }
+function n2(x, y) { const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, tx = fx * fx * (3 - 2 * fx), ty = fy * fy * (3 - 2 * fy), a = h1(ix * 57 + iy * 131), b = h1((ix + 1) * 57 + iy * 131), c = h1(ix * 57 + (iy + 1) * 131), d = h1((ix + 1) * 57 + (iy + 1) * 131); return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty; }
+function paintBuf() {
+  if (Swap.cache.pb) return Swap.cache.pb;
+  const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = absLabels(), {comp, list} = regionInfo();
+  const col = Swap.map.map(m => { const p = m.no ? penByNo(m.no) : null; return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
+  const D = new Uint8Array(N).fill(8);
+  for (let i = 0; i < N; i++) { const x = i % W; if ((x > 0 && lab[i - 1] !== lab[i]) || (x < W - 1 && lab[i + 1] !== lab[i]) || (i >= W && lab[i - W] !== lab[i]) || (i + W < N && lab[i + W] !== lab[i])) D[i] = 0; }
+  for (let i = 0; i < N; i++) { const x = i % W; let v = D[i]; if (x > 0) v = Math.min(v, D[i - 1] + 1); if (i >= W) v = Math.min(v, D[i - W] + 1); D[i] = v; }
+  for (let i = N - 1; i >= 0; i--) { const x = i % W; let v = D[i]; if (x < W - 1) v = Math.min(v, D[i + 1] + 1); if (i + W < N) v = Math.min(v, D[i + W] + 1); D[i] = v; }
+  const ang = list.map(c => { const w = c.maxx - c.minx + 1, h = c.maxy - c.miny + 1; return (w >= h * .8 ? 0 : Math.PI / 2) + h1(c.id * 7.3) * .35; });
+  const cs = ang.map(Math.cos), sn = ang.map(Math.sin), g = grain(N), sc = Math.max(1, W / 860), out = new Uint8ClampedArray(N * 4);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, ci = comp[i], c = col[lab[i]];
+    const u = (x * cs[ci] + y * sn[ci]) / sc, v = (-x * sn[ci] + y * cs[ci]) / sc;
+    const streak = n1(v / 3.2 + ci * 17.1) * .6 + n1(v / 11 + ci * 3.7) * .4, along = n2(u / 55 + ci, v / 7), bloom = n2(x / (70 * sc) + 3.1, y / (70 * sc) + ci * .37);
+    let f = 1 + .05 * streak + .025 * along + .014 * g[i];
+    const dd = D[i]; if (dd < 4) f *= 1 - .12 * (1 - dd / 4);
+    let R = c[0] * f, G = c[1] * f, B = c[2] * f;
+    const lift = Math.max(0, bloom) * .1; R += (255 - R) * lift; G += (255 - G) * lift; B += (255 - B) * lift;
+    if (dd === 0 && g[i] > .25) { R += (251 - R) * .45; G += (250 - G) * .45; B += (246 - B) * .45; }
+    out[i * 4] = R; out[i * 4 + 1] = G; out[i * 4 + 2] = B; out[i * 4 + 3] = 255;
+  }
+  return (Swap.cache.pb = out);
+}
 /* 画稿用的干净分区：同一支笔的块合并，抹平毛边，太碎的并进旁边；编号按面积从大到小 */
 function sketchData() {
   if (Swap.cache.sk) return Swap.cache.sk;
   const r = Swap.res, W = r.W, H = r.H, N = W * H, keys = [], kid = new Map();
   const toKey = Swap.map.map(m => { const k = m.no || ('#' + m.c.hex); if (!kid.has(k)) { kid.set(k, keys.length); keys.push({k, no: m.no, hex: m.no ? penByNo(m.no).hex : m.c.hex}); } return kid.get(k); });
-  let lab = new Uint8Array(N); for (let i = 0; i < N; i++) lab[i] = toKey[r.labels[i]];
-  for (let p = 0; p < 3; p++) lab = majority(lab, W, H, keys.length);
-  lab = mergeSmall(lab, W, H, Math.round(N * .0006));
+  const al = absLabels();
+  let lab = new Uint8Array(N); for (let i = 0; i < N; i++) lab[i] = toKey[al[i]];
+  lab = mergeSmall(majority(lab, W, H, keys.length), W, H, Math.round(N * .0006));
+  const raw = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const x = i % W; if ((x < W - 1 && lab[i + 1] !== lab[i]) || (i + W < N && lab[i + W] !== lab[i])) raw[i] = 1; }
+  const soft = gaussBlur(raw, W, H, .8), edge = new Float32Array(N);
+  for (let i = 0; i < N; i++) edge[i] = Math.min(1, soft[i] * 2.2);
   const area = new Float64Array(keys.length); for (let i = 0; i < N; i++) area[lab[i]]++;
   const order = keys.map((_, i) => i).filter(i => area[i] > 0).sort((a, b) => area[b] - area[a]);
   const num = new Int16Array(keys.length).fill(0); order.forEach((k, j) => { num[k] = j + 1; });
@@ -1321,7 +1392,7 @@ function sketchData() {
     placed.push({x: m.x, y: m.y, v: m.v, fs, rad});
     if (placed.length >= 90) break;
   }
-  return (Swap.cache.sk = {lab, keys, num, order, area, placed});
+  return (Swap.cache.sk = {lab, keys, num, order, area, placed, edge});
 }
 /* 起稿线：比画稿分区再粗一档，只留大形的外轮廓 */
 function outlineData() {
@@ -1377,7 +1448,8 @@ function render(cv, view, step) {
   }
   const W = r.W, H = r.H, N = W * H;
   cv.width = W; cv.height = H;
-  const x = cv.getContext('2d'), im = x.createImageData(W, H), d = im.data, lab = r.labels, LN = r.lines;
+  const x = cv.getContext('2d'), im = x.createImageData(W, H), d = im.data, lab = absLabels(), LN = r.lines;
+  const pb = Swap.paintStyle === 'wc' && view !== 'lines' ? paintBuf() : null;
   const col = Swap.map.map((m, i) => { const p = penForLabel(i); return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
   const INK = [36, 38, 50], PAPER = [251, 250, 246], lk = Swap.lineOn ? .9 / 255 : 0;
   const put = (i, c, a) => { d[i * 4] = c[0] + (INK[0] - c[0]) * a; d[i * 4 + 1] = c[1] + (INK[1] - c[1]) * a; d[i * 4 + 2] = c[2] + (INK[2] - c[2]) * a; d[i * 4 + 3] = 255; };
@@ -1389,15 +1461,17 @@ function render(cv, view, step) {
   } else if (view === 'step') {
     const so = Swap.cache.stepOf;
     const ed = outlineData().edge;
-    for (let i = 0; i < N; i++) { const on = so && so[i] <= step; put(i, on ? col[lab[i]] : PAPER, on ? LN[i] * lk : ed[i] * .55); }
+    for (let i = 0; i < N; i++) { const on = so && so[i] <= step; put(i, on ? (pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : col[lab[i]]) : PAPER, on ? LN[i] * lk : ed[i] * .55); }
   } else if (view === 'sketch') {
     const sk = sketchData(), sl = sk.lab, f = Swap.skFill, EDGE = [84, 86, 100];
     const fillc = sk.keys.map(k => { const c = hex2rgb(k.hex); return [PAPER[0] + (c[0] - PAPER[0]) * f, PAPER[1] + (c[1] - PAPER[1]) * f, PAPER[2] + (c[2] - PAPER[2]) * f]; });
-    const la = f >= 1 ? lk * .7 : .45 / 255;
+    const se = sk.edge;
     for (let i = 0; i < N; i++) {
-      const v = sl[i], xx = i % W, edge = (xx < W - 1 && sl[i + 1] !== v) || (i + W < N && sl[i + W] !== v);
-      if (edge) put(i, EDGE, 0); else put(i, fillc[v], LN[i] * la);
+      const c = f >= 1 && pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : fillc[sl[i]], e = se[i] * .9;
+      d[i * 4] = c[0] + (EDGE[0] - c[0]) * e; d[i * 4 + 1] = c[1] + (EDGE[1] - c[1]) * e; d[i * 4 + 2] = c[2] + (EDGE[2] - c[2]) * e; d[i * 4 + 3] = 255;
     }
+  } else if (pb) {
+    for (let i = 0; i < N; i++) { const a = LN[i] * lk, R = pb[i * 4], G = pb[i * 4 + 1], B = pb[i * 4 + 2]; d[i * 4] = R + (INK[0] - R) * a; d[i * 4 + 1] = G + (INK[1] - G) * a; d[i * 4 + 2] = B + (INK[2] - B) * a; d[i * 4 + 3] = 255; }
   } else {
     for (let i = 0; i < N; i++) put(i, col[lab[i]], LN[i] * lk);
   }
@@ -1512,7 +1586,7 @@ function renderSwapList() {
 }
 function regionInfo() {
   if (Swap.cache.regions) return Swap.cache.regions;
-  const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = r.labels, comp = new Int32Array(N).fill(-1), q = new Int32Array(N), list = [];
+  const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = absLabels(), comp = new Int32Array(N).fill(-1), q = new Int32Array(N), list = [];
   for (let s0 = 0; s0 < N; s0++) {
     if (comp[s0] !== -1) continue;
     const v = lab[s0], id = list.length, c = {id, v, area: 0, sx: 0, sy: 0, minx: W, maxx: 0, miny: H, maxy: 0, border: false};
@@ -1591,7 +1665,7 @@ function autoSteps() {
   return {steps, stepOf};
 }
 function aiSteps() {
-  const a = Swap.ai, r = Swap.res, W = r.W, H = r.H, N = W * H, lab = r.labels;
+  const a = Swap.ai, r = Swap.res, W = r.W, H = r.H, N = W * H, lab = absLabels();
   const steps = a.steps.map(st => ({t: st.title, d: (st.where ? st.where + '：' : '') + st.how, nos: st.pens, box: st.box, tool: st.tool, wait: st.wait}));
   const last = steps.length - 1, stepOf = new Uint8Array(N);
   const penOf = Swap.map.map(m => m.no);
@@ -1621,14 +1695,14 @@ function renderSteps() {
   if (aiBusy) {} else if (Swap.ai && Swap.procMode === 'ai') { tips.hidden = false; tips.innerHTML = analHTML(Swap.ai); } else tips.hidden = true;
   const olist = $('#procSteps');
   olist.innerHTML = steps.map((st, k) => '<li><button type="button" class="pstep" data-step="' + k + '" aria-pressed="' + (Swap.view === 'step' && Swap.step === k) + '"><canvas width="10" height="10"></canvas><span class="n">第 ' + (k + 1) + ' 步</span><b>' + esc(st.t) + '</b>' + (st.tool || st.wait ? '<span class="sbadges">' + (st.tool ? '<i>' + esc(st.tool) + '</i>' : '') + (st.wait ? '<i class="w">画完等干</i>' : '') + '</span>' : '') + '<span class="penstrip">' + st.nos.map(n => penHTML(penByNo(n), 'mini')).join('') + '</span><p>' + esc(st.d) + '</p></button></li>').join('');
-  const W = r.W, H = r.H, sc = Math.max(1, Math.floor(W / 240)), lab = r.labels, LN = r.lines;
+  const W = r.W, H = r.H, sc = Math.max(1, Math.floor(W / 240)), lab = absLabels(), LN = r.lines, pb = Swap.paintStyle === 'wc' ? paintBuf() : null;
   const col = Swap.map.map(m => { const p = m.no ? penByNo(m.no) : null; return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
   const lk = Swap.lineOn ? .9 / 255 : 0, ol = outlineData().lab;
   steps.forEach((st, k) => {
     const cv = olist.querySelectorAll('canvas')[k]; cv.width = Math.ceil(W / sc); cv.height = Math.ceil(H / sc);
     const x = cv.getContext('2d'), im = x.createImageData(cv.width, cv.height), d = im.data;
     for (let y = 0; y < cv.height; y++) for (let xx = 0; xx < cv.width; xx++) {
-      const yy = Math.min(H - 1, y * sc), xs = Math.min(W - 1, xx * sc), i = yy * W + xs, on = so[i] <= k, c = on ? col[lab[i]] : [251, 250, 246], o = (y * cv.width + xx) * 4;
+      const yy = Math.min(H - 1, y * sc), xs = Math.min(W - 1, xx * sc), i = yy * W + xs, on = so[i] <= k, c = on ? (pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : col[lab[i]]) : [251, 250, 246], o = (y * cv.width + xx) * 4;
       const e = !on && ((xs + sc < W && ol[i + sc] !== ol[i]) || (yy + sc < H && ol[i + sc * W] !== ol[i]));
       const a = on ? LN[i] * lk : e ? .55 : 0;
       d[o] = c[0] + (36 - c[0]) * a; d[o + 1] = c[1] + (38 - c[1]) * a; d[o + 2] = c[2] + (50 - c[2]) * a; d[o + 3] = 255;
@@ -1713,7 +1787,9 @@ $('#swapCv').addEventListener('pointermove', e => { if (cmpDrag) cmpAt(e); });
 $$('[data-kind]').forEach(b => b.addEventListener('click', () => setKind(b.dataset.kind)));
 let slideT = 0;
 $('#nIn').addEventListener('input', e => { $('#nOut').value = e.target.value; Swap.n = +e.target.value; clearTimeout(slideT); slideT = setTimeout(runAnalyze, 220); });
-$('#detIn').addEventListener('input', e => { $('#detOut').value = e.target.value; Swap.detail = +e.target.value; clearTimeout(slideT); slideT = setTimeout(runAnalyze, 220); });
+$('#detIn').addEventListener('input', e => { $('#detOut').value = e.target.value; Swap.detail = +e.target.value; clearTimeout(slideT); slideT = setTimeout(() => { Swap.cache = {}; render(); renderSwapList(); adjSum(); }, 200); });
+$('#vivIn').addEventListener('input', e => { $('#vivOut').value = e.target.value; Swap.vivid = +e.target.value / 100; clearTimeout(slideT); slideT = setTimeout(runAnalyze, 250); });
+$$('#pStyle [data-ps]').forEach(b => b.addEventListener('click', () => { Swap.paintStyle = b.dataset.ps; $$('#pStyle [data-ps]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); renderSteps(); }));
 $('#onlyHave').addEventListener('change', e => { Swap.onlyHave = e.target.checked; Swap.cache = {marks: Swap.cache.marks}; Swap.rematch(); });
 
 /* 选图 / 拖拽 / 粘贴 */
@@ -1789,6 +1865,7 @@ async function runAi(auto) {
   const used = swapPens().map(p => { const pen = penByNo(p.no); return p.no + ' ' + (pen ? pen.name : '') + ' 占' + Math.round(p.share * 100) + '% 原图颜色' + p.src; }).join('\n');
   const what = Swap.kind === 'photo' ? '一张我自己拍的照片，我想把它画成一幅丙烯马克笔画' : '别人画的一幅丙烯马克笔画，我想用我自己的笔临摹';
   const prompt = '你是丙烯马克笔绘画老师，回答用简体中文。图片是' + what + '。\n\n我手上有的笔（色号 名字 色值）：\n' + avail + '\n\n程序已经把画面颜色对应到我的笔（色号 名字 占比 原图颜色）：\n' + used +
+    '\n\n我喜欢抽象、鲜艳、有水彩感的画风：不用一比一照抄，可以概括形状、提炼和加强颜色，但要保留这张画最打动人的地方。请多讲怎么用丙烯马克笔做出水彩感（浅色先铺、趁上一层没干透叠下一层做过渡、笔尖轻扫做晕染边、留白透气、笔触顺着形体方向）。' +
     '\n\n请你像一位有十年经验、专门教丙烯马克笔的插画老师那样，把这张画专业地拆解给我，然后写一份像小红书「附过程」那样细的临摹步骤。\n' +
     '拆解要说到点子上：构图（视觉中心在哪、画面怎么分层：远/中/近）、光源（从哪边来、亮面暗面投影在哪）、配色（主色、辅助色、点缀色，冷暖关系）、难点（最容易画坏的地方和怎么处理）。\n' +
     '起稿：告诉我只需要先轻轻勾哪几条大轮廓（不超过 5 条，说清楚位置），哪些细节不用起稿、直接画。\n' +
@@ -2140,7 +2217,7 @@ async function openInSwap(it) {
     const img = await loadImg(data);
     showTab('swap');
     Swap.split = .5; Swap.view = 'compare';
-    await setWork(img, {itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', style: it.style || '', ai: it.plan2 || null, title: it.title, n: it.n, detail: it.detail, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
+    await setWork(img, {itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', style: it.style || '', ai: it.plan2 || null, title: it.title, n: it.abs != null ? it.n : 14, detail: it.abs != null ? it.abs : 2, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
     setView('compare');
     if (!it.plan2) runAi(true);
   } catch (e) { toast('图打不开了。'); }
@@ -2149,7 +2226,7 @@ function fromSwap(kind) {
   const it0 = Swap.itemId && Store.items.get(Swap.itemId);
   const sh = Swap.share || {};
   const x = it0 ? plain(it0) : {id: newId(), kind, created: Date.now(), title: sh.title || $('#srcTitle').textContent || '', author: sh.author || '', link: sh.url || '', tags: (sh.tags || []).slice(), love: 0};
-  x.pens = swapPens(); x.n = Swap.n; x.detail = Swap.detail; x.ov = Swap.ov; x.extra = Swap.extra; x.src = Swap.kind; x.style = Swap.style;
+  x.pens = swapPens(); x.n = Swap.n; x.abs = Swap.detail; x.ov = Swap.ov; x.extra = Swap.extra; x.src = Swap.kind; x.style = Swap.style;
   if (Swap.ai) x.plan2 = Swap.ai;
   return x;
 }
@@ -2490,7 +2567,7 @@ async function bootSample() {
     const res = await fetch(o.f); if (!res.ok) throw new Error('fetch');
     const cv = await fileToCanvas(await res.blob(), 1400);
     if (!Swap.demo && Swap.work) return;
-    await setWork(cv, {demo: true, kind: 'art', title: o.title, n: 16, detail: 0, style: '', share: {title: o.title, author: o.author, url: o.url, tags: o.tags}});
+    await setWork(cv, {demo: true, kind: 'art', title: o.title, n: 14, detail: 2, style: '', share: {title: o.title, author: o.author, url: o.url, tags: o.tags}});
     $('#srcKind').textContent = '示例 · ' + o.author; Swap.split = .5; setView('compare');
   } catch (e) { $('#busy').hidden = true; }
 }

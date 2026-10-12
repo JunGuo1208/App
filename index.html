@@ -573,6 +573,14 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           <div class="ctl"><label for="nIn">颜色数</label><input type="range" id="nIn" min="4" max="28" value="18"><output id="nOut" for="nIn">18</output></div>
           <div class="ctl" id="detailCtl"><label for="detIn">抽象度</label><input type="range" id="detIn" min="0" max="4" value="1"><output id="detOut" for="detIn">1</output></div>
           <div class="ctl"><label for="depIn">层次感</label><input type="range" id="depIn" min="0" max="100" step="5" value="70"><output id="depOut" for="depIn">70</output></div>
+          <div class="style-row"><span class="label">光从</span>
+            <div class="pills" role="group" aria-label="光从哪边来" id="lightP">
+              <button type="button" data-light="" aria-pressed="true">自动</button>
+              <button type="button" data-light="tl" aria-pressed="false">左上</button>
+              <button type="button" data-light="top" aria-pressed="false">正上</button>
+              <button type="button" data-light="tr" aria-pressed="false">右上</button>
+            </div>
+          </div>
           <div class="ctl"><label for="vivIn">鲜艳度</label><input type="range" id="vivIn" min="90" max="170" step="5" value="110"><output id="vivOut" for="vivIn">110</output></div>
           <div class="style-row"><span class="label">风格</span>
             <div class="pills" role="group" aria-label="风格" id="styleP">
@@ -1187,13 +1195,15 @@ function analyze(cv, k, detail) {
   let lo = 0; { let acc = 0; for (let v = 0; v <= 100; v++) { acc += hN[v]; if (acc >= .01 * nN) { lo = v; break; } } }
   lo = Math.min(lo, 20, pct(.01));
   const hi = Math.max(lo + 20, pct(.99)), top = pct(.95);
+  // 只拉两头：暗处往黑拉一点、亮处校成白，中间调不动（不然整片中蓝会被压成暗蓝，配到发灰的笔）
+  const mid = Math.max(lo + 10, Math.min(hi - 10, 50)), lo2 = Math.max(3, lo * .5);
   let sa = 0, sb = 0, sn = 0;
   for (let i = 0; i < N; i++) { const l = L[i * 3], a = L[i * 3 + 1], b = L[i * 3 + 2]; if (l >= top && a * a + b * b < 484) { sa += a; sb += b; sn++; } }
   const a0 = sn ? Math.max(-12, Math.min(12, sa / sn)) : 0, b0 = sn ? Math.max(-12, Math.min(12, sb / sn)) : 0, vv = Swap.vivid || 1.1;
   // 黑、白、灰保持中性：只给真正有颜色、又不太暗的地方提鲜（不然黑头发会变藏青、灰桌面会变蓝）
   const sst = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
   for (let i = 0; i < N; i++) {
-    const l = Math.max(0, Math.min(100, 3 + (L[i * 3] - lo) * 95 / (hi - lo))), wb = Math.min(1, L[i * 3] / 90), a = L[i * 3 + 1] - a0 * wb, b = L[i * 3 + 2] - b0 * wb, C = Math.hypot(a, b);
+    const L0 = L[i * 3], l = Math.max(0, Math.min(100, L0 < mid ? lo2 + (L0 - lo) * (mid - lo2) / (mid - lo) : mid + (L0 - mid) * (97 - mid) / Math.max(1, hi - mid))), wb = Math.min(1, L[i * 3] / 90), a = L[i * 3 + 1] - a0 * wb, b = L[i * 3 + 2] - b0 * wb, C = Math.hypot(a, b);
     const f = 1 + (vv - 1) * sst(7, 18, C) * sst(14, 32, l);
     L[i * 3] = l; L[i * 3 + 1] = a * f; L[i * 3 + 2] = b * f;
   }
@@ -1380,7 +1390,8 @@ function absLabels() {
   if (lvl > 0) {
     const pl = Swap.map.map(m => m.no ? hexLab(penByNo(m.no).hex) : m.c.lab), par = Array.from({length: K2}, (_, i) => i);
     const fd = i => { while (par[i] !== i) i = par[i] = par[par[i]]; return i; };
-    for (let a = 0; a < K2; a++) for (let b = a + 1; b < K2; b++) if (dE(pl[a], pl[b]) < 15) par[fd(a)] = fd(b);
+    const near = (p, q) => dE(p, q) < 15 && Math.abs(Math.hypot(p[1], p[2]) - Math.hypot(q[1], q[2])) < 7;
+    for (let a = 0; a < K2; a++) for (let b = a + 1; b < K2; b++) if (near(pl[a], pl[b])) par[fd(a)] = fd(b);
     const fam = new Uint8Array(N); for (let i = 0; i < N; i++) fam[i] = fd(out[i]);
     const cid = new Int32Array(N).fill(-1), st = new Int32Array(N); let nc = 0;
     for (let s0 = 0; s0 < N; s0++) {
@@ -1396,7 +1407,7 @@ function absLabels() {
         const cnt = new Float64Array(K2); for (const i of px) cnt[out[i]]++;
         let bk = 0; for (let k = 1; k < K2; k++) if (cnt[k] > cnt[bk]) bk = k;
         // 只并和主色真的很近的笔（不顺着「浅肉色→白→纸边」这种链一路并过去）
-        const ok = pl.map(c => dE(c, pl[bk]) < 15);
+        const ok = pl.map(c => near(c, pl[bk]));
         for (const i of px) if (ok[out[i]]) { out[i] = bk; dab[i] = bk; big[i] = 1; }
       }
     }
@@ -1427,12 +1438,83 @@ function paperTex(W, H) {
    2 笔触：笔头宽度的平行笔道，相邻笔道重叠的地方更深一点
    3 颜料浓淡不均、边缘颜料堆积
    4 纸的凹凸：凸起处受光、凹处颜料挂不上露出一点纸白 */
+/* 光影：不照抄原图的明暗，而是像画家一样先定一个光源，再给每个形体「受光面 / 明暗交界 / 背光面 / 反光」，
+   主体在背景上投一个软影子；受光面偏暖、背光面偏冷（水彩里阴影常常是罩一层蓝紫）。
+   形体的体积用「鼓起来」的办法估：离轮廓越远越高，像一个圆鼓鼓的软垫，再按光的方向算哪边亮哪边暗 */
+const LIGHTS = {tl: [-1, -1.15], top: [0, -1], tr: [1, -1.15]};
+function lightField() {
+  if (Swap.cache.lf) return Swap.cache.lf;
+  const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = absLabels(), big = Swap.cache.big, Lc = r.Lc;
+  const w2 = Math.ceil(W / 2), h2 = Math.ceil(H / 2), n2_ = w2 * h2, sub = new Uint8Array(n2_), lb = new Uint8Array(n2_), Lh = new Float32Array(n2_);
+  for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) { const i = Math.min(H - 1, y * 2) * W + Math.min(W - 1, x * 2), j = y * w2 + x; sub[j] = big && big[i] ? 0 : 1; lb[j] = lab[i]; Lh[j] = Lc[i]; }
+  let ns = 0; for (let j = 0; j < n2_; j++) ns += sub[j];
+  const hasBg = ns < n2_ * .97;
+  // 距离：到主体外轮廓（整体的大体积）和到色块边（每块自己的小起伏）
+  const dist = (isB) => { const d = new Float32Array(n2_), BIG = 1e6;
+    for (let j = 0; j < n2_; j++) d[j] = isB(j) ? 0 : BIG;
+    for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) { const j = y * w2 + x; let v = d[j]; if (!v) continue; if (x > 0) v = Math.min(v, d[j - 1] + 1); if (y > 0) { v = Math.min(v, d[j - w2] + 1); if (x > 0) v = Math.min(v, d[j - w2 - 1] + 1.414); if (x < w2 - 1) v = Math.min(v, d[j - w2 + 1] + 1.414); } d[j] = v; }
+    for (let y = h2 - 1; y >= 0; y--) for (let x = w2 - 1; x >= 0; x--) { const j = y * w2 + x; let v = d[j]; if (!v) continue; if (x < w2 - 1) v = Math.min(v, d[j + 1] + 1); if (y < h2 - 1) { v = Math.min(v, d[j + w2] + 1); if (x < w2 - 1) v = Math.min(v, d[j + w2 + 1] + 1.414); if (x > 0) v = Math.min(v, d[j + w2 - 1] + 1.414); } d[j] = v; }
+    return d; };
+  // 只给「大的形」做体积：主体轮廓先糊一下，碎点、小飞鸟这些不鼓（不然满画面都是浮雕感）
+  const m = Math.min(w2, h2), RG = m * .14;
+  const sm = gaussBlur(Float32Array.from(sub), w2, h2, RG * .18), form = new Uint8Array(n2_);
+  for (let j = 0; j < n2_; j++) form[j] = hasBg && sub[j] && sm[j] > .5 ? 1 : 0;
+  const dG = dist(j => !form[j]);
+  let h = new Float32Array(n2_);
+  for (let j = 0; j < n2_; j++) { if (!form[j]) continue; const t = Math.min(dG[j], RG) / RG; h[j] = RG * (1 - (1 - t) * (1 - t)); }
+  h = gaussBlur(h, w2, h2, Math.max(1.6, RG * .1));
+  const nx = new Float32Array(n2_), ny = new Float32Array(n2_);
+  for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) { const j = y * w2 + x; if (!form[j]) continue; const hx = (h[Math.min(n2_ - 1, j + (x < w2 - 1 ? 1 : 0))] - h[j - (x > 0 ? 1 : 0)]) / 2, hy = (h[j + (y < h2 - 1 ? w2 : 0)] - h[j - (y > 0 ? w2 : 0)]) / 2, l = Math.hypot(hx, hy, 1); nx[j] = -hx / l; ny[j] = -hy / l; }
+  // 光从哪来：「自动」就在上半圈里挑一个和原图明暗最对得上的方向
+  const lamOf = (lx, ly, j) => { const l = Math.hypot(lx, ly), ax = lx / l * .7, ay = ly / l * .7; const nz = Math.sqrt(Math.max(0, 1 - nx[j] * nx[j] - ny[j] * ny[j])); return nx[j] * ax + ny[j] * ay + nz * .714 - .714; };
+  let L2 = LIGHTS[Swap.light];
+  if (!L2) {
+    const mean = new Float64Array(256), cnt = new Float64Array(256); for (let j = 0; j < n2_; j++) if (sub[j]) { mean[lb[j]] += Lh[j]; cnt[lb[j]]++; }
+    let best = -1e9; L2 = LIGHTS.tl;
+    for (let a = 0; a < 7; a++) { const th = Math.PI * (1.08 + a * .14), lx = Math.cos(th), ly = Math.sin(th); let sc = 0;
+      for (let j = 0; j < n2_; j += 3) if (form[j]) sc += lamOf(lx, ly, j) * (Lh[j] - mean[lb[j]] / cnt[lb[j]]);
+      if (a === 1 || a === 5) sc *= 1.04;
+      if (sc > best) { best = sc; L2 = [lx, ly]; } }
+  }
+  const lx = L2[0] / Math.hypot(L2[0], L2[1]), ly = L2[1] / Math.hypot(L2[0], L2[1]);
+  // 受光 / 交界 / 背光 / 反光，归成几块面（水彩不是渐变喷枪，是一块一块的面）
+  const sst = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+  const tone = new Float32Array(n2_), core = new Float32Array(n2_);
+  for (let j = 0; j < n2_; j++) {
+    if (!form[j]) continue;
+    const s2 = lamOf(lx, ly, j) / .35, lit = sst(.12, .3, s2), sh = sst(-.08, -.26, s2);
+    const refl = sh * (hasBg ? (1 - sst(0, RG * .2, dG[j])) * .45 : 0);
+    tone[j] = lit - sh + refl; core[j] = sh * (1 - sst(-.26, -.6, s2)) * (1 - refl * 2);
+  }
+  // 投影：主体往背光的方向挪一点、糊开，落在背景上；贴着主体的地方再暗一圈
+  const cast = new Float32Array(n2_);
+  if (hasBg) {
+    const ox = Math.round(-lx * RG * .32), oy = Math.round(-ly * RG * .32), sh = new Float32Array(n2_);
+    for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) { const sx = x - ox, sy = y - oy; if (sx >= 0 && sy >= 0 && sx < w2 && sy < h2 && sub[sy * w2 + sx]) sh[y * w2 + x] = 1; }
+    const a = gaussBlur(sh, w2, h2, RG * .16), ao = gaussBlur(sub.map ? Float32Array.from(sub) : sub, w2, h2, RG * .06);
+    // 天空不接影子：靠上、贴着上边的大底色当天空，云和山不往天上投影
+    const cy = new Float64Array(256), cn = new Float64Array(256), top = new Uint8Array(256);
+    for (let j = 0; j < n2_; j++) if (!sub[j]) { cy[lb[j]] += (j / w2 | 0) / h2; cn[lb[j]]++; if (j < w2) top[lb[j]] = 1; }
+    const sky = Array.from(cy, (v, k) => cn[k] && top[k] && v / cn[k] < .42);
+    // 影子只投在「一整块衬底」上（金鱼的蓝底、番茄的水）：风景画里底色有好几块（天、山、水），不投
+    const Lk = Swap.map.map(m => m.no ? hexLab(penByNo(m.no).hex)[0] : m.c.lab[0]);
+    const grounds = []; cn.forEach((c, k) => { if (c > n2_ * .03 && Lk[k] < 88) grounds.push(k); });
+    const one = grounds.length === 1 && !sky[grounds[0]] ? grounds[0] : -1;
+    for (let j = 0; j < n2_; j++) if (!sub[j] && lb[j] === one) cast[j] = Math.min(1, sst(.08, .6, a[j]) * .85 + ao[j] * .5);
+  }
+  const up = (src) => { const o = new Float32Array(N);
+    for (let y = 0; y < H; y++) { const fy = Math.max(0, Math.min(h2 - 1.001, y / 2)), y0 = fy | 0, ty = fy - y0, y1 = Math.min(h2 - 1, y0 + 1);
+      for (let x = 0; x < W; x++) { const fx = Math.max(0, Math.min(w2 - 1.001, x / 2)), x0 = fx | 0, tx = fx - x0, x1 = Math.min(w2 - 1, x0 + 1);
+        o[y * W + x] = (src[y0 * w2 + x0] * (1 - tx) + src[y0 * w2 + x1] * tx) * (1 - ty) + (src[y1 * w2 + x0] * (1 - tx) + src[y1 * w2 + x1] * tx) * ty; } }
+    return o; };
+  return (Swap.cache.lf = {tone: up(tone), core: up(core), cast: up(cast), lx, ly, hasBg});
+}
 /* 分层罩染（水彩的平涂 + 叠色）：大面积底色不跟着照片的噪点走，像在斜放的画板上一层层上水彩——
    1 量出原画整片底色「哪边亮、哪边暗」的大方向（一个斜面）
    2 顺着这个方向分成 3 层台阶：先整片铺最浅的一层，干了再从暗的那头叠第二层、第三层，
      每层的边是笔刷拖出来的略带起伏的直边，层边留一条略深的水痕
    3 原画里更细的明暗只留一点点，四角再轻轻压暗，把视线留在主体上 */
-function washField(lab, big, Lc, W, H, depth) {
+function washField(lab, big, Lc, W, H, depth, LF) {
   if (!big) return null;
   const N = W * H; let any = 0; for (let i = 0; i < N; i += 7) if (big[i]) { any = 1; break; }
   if (!any) return null;
@@ -1457,8 +1539,9 @@ function washField(lab, big, Lc, W, H, depth) {
     }
     const mu = su / n, mw = sw / n, mL = sL / n, cuu = suu / n - mu * mu, cww = sww / n - mw * mw, cuw = suw / n - mu * mw, cuL = suL / n - mu * mL, cwL = swL / n - mw * mL, det = cuu * cww - cuw * cuw;
     let gx = det > 1e-6 ? (cuL * cww - cwL * cuw) / det : 0, gy = det > 1e-6 ? (cwL * cuu - cuL * cuw) / det : 0;
-    // 原画几乎是平的：按习惯上深下浅（天空、背景都这么铺）
-    if (Math.hypot(gx, gy) < 4) { gx = gx * .3; gy = 6; }
+    // 底色的深浅方向跟着定好的光走：靠光的那头浅，离光远的那头深（原图的斜面只用来算细的起伏）
+    const fgx = gx, fgy = gy;
+    if (LF) { gx = LF.lx; gy = LF.ly; } else if (Math.hypot(gx, gy) < 4) { gx = gx * .3; gy = 6; }
     const gl = Math.hypot(gx, gy), dx = gx / gl, dy = gy / gl;
     let pmin = 1e9, pmax = -1e9;
     for (let i = 0; i < N; i++) if (big[i] && lab[i] === k) { const p = (i % W) / W * dx + ((i / W) | 0) / H * dy; if (p < pmin) pmin = p; if (p > pmax) pmax = p; }
@@ -1467,9 +1550,9 @@ function washField(lab, big, Lc, W, H, depth) {
       const i = y * W + x; if (!big[i] || lab[i] !== k) continue;
       const u = x / W, w = y / H, p = (u * dx + w * dy - pmin) / span, perp = (-u * dy + w * dx) * W / sc;
       // 0 = 暗的一头，1 = 亮的一头；台阶边用笔刷拖出来的那种轻微起伏
-      const g = (p - .5) * 2 * 8 + n1(perp / 260 + k * 3.1) * 1.3 + n1(perp / 45 + k * 1.7) * .22;
+      const g = (p - .5) * 2 * 8 + n1(perp / 300 + k * 3.1) * .8 + n1(perp / 45 + k * 1.7) * .18;
       const s2 = g / step, fl = Math.floor(s2), fr = s2 - fl, e = fr < .7 ? 0 : fr > .9 ? 1 : (fr - .7) / .2, sm = e * e * (3 - 2 * e);
-      const plane = mL + gx * (u - .5 - mu) + gy * (w - .5 - mw);
+      const plane = mL + fgx * (u - .5 - mu) + fgy * (w - .5 - mw);
       const fine = Math.max(-5, Math.min(5, (Ls[i] - plane) * depth * .8));
       const ddx = (u - .5) * 2, ddy = (w - .48) * 2, rr = Math.min(1, Math.hypot(ddx, ddy) / 1.3);
       v[i] = (fl + sm) * step + fine - 6 * rr * rr * rr + 2;
@@ -1497,10 +1580,12 @@ function paintBuf() {
   for (let i = N - 1; i >= 0; i--) { const x = i % W; let v = D[i]; if (x < W - 1) v = Math.min(v, D[i + 1] + 1); if (i + W < N) v = Math.min(v, D[i + W] + 1); D[i] = v; }
   const ang = list.map(c => { const w = c.maxx - c.minx + 1, h = c.maxy - c.miny + 1; return (w >= h * .8 ? 0 : Math.PI / 2) + h1(c.id * 7.3) * .3; });
   const cs = ang.map(Math.cos), sn = ang.map(Math.sin), sc = Math.max(1, W / 860), tip = 9 * sc, out = new Uint8ClampedArray(N * 4);
-  const PT = paperTex(W, H), ph = PT.h, ps = PT.s, wash = washField(lab, Swap.cache.big, Lc, W, H, depth);
+  const PT = paperTex(W, H), ph = PT.h, ps = PT.s, LF = lightField(), wash = washField(lab, Swap.cache.big, Lc, W, H, depth, LF);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x, ci = comp[i], vp = labP[i], wv = wash ? wash.v[i] : NaN, inW = wv === wv;
-    const dRaw = inW ? wv : (Lc[i] - meanL[vp]) * depth, dL = Math.max(-30, Math.min(30, Math.round(dRaw < 0 ? dRaw * ST.down : dRaw))), c = lut[vp][dL + 30];
+    // 主体：原图的明暗只留一半当细节，体积感交给定好的光；背景：分层罩染 + 投影
+    const tn = LF.tone[i], cr = LF.core[i], cs = LF.cast[i];
+    const dRaw = inW ? wv - cs * 16 * (.5 + depth * .7) : (Lc[i] - meanL[vp]) * depth * (LF.hasBg ? .55 : 1) + (tn * (tn > 0 ? 8 : 13) - cr * 7) * (.4 + depth * .9), dL = Math.max(-30, Math.min(30, Math.round(dRaw < 0 ? dRaw * ST.down : dRaw))), c = lut[vp][dL + 30];
     const u = x * cs[ci] + y * sn[ci], v = -x * sn[ci] + y * cs[ci];
     // 笔道：每条宽一个笔头，边缘轻微抖动；两条笔道交叠处（t 接近 0）多一层颜料
     const band = v / tip + n1(u / (38 * sc) + ci * 5.3) * .25, t = band - Math.floor(band), overlap = t < .14 ? (1 - t / .14) : 0;
@@ -1510,7 +1595,9 @@ function paintBuf() {
     if (inW) f *= 1 - .05 * wash.rim[i];
     const dd = D[i]; if (dd < 4) f *= 1 - ST.edge * (1 - dd / 4);
     f *= 1 + .07 * ps[i];
-    let R = c[0] * f, G = c[1] * f, B = c[2] * f;
+    // 冷暖：受光面带一点暖黄，背光面和投影里罩一点蓝紫
+    const tw = (inW ? -cs : tn - cr * .5) * (.4 + depth * .6);
+    let R = c[0] * f * (1 + (tw > 0 ? .03 : .07) * tw), G = c[1] * f * (1 + (tw > 0 ? .012 : .035) * tw), B = c[2] * f * (1 - (tw > 0 ? .06 : .02) * tw);
     // 水彩是透明的：颜色和纸叠在一起，浓淡不匀；深色笔盖得住一些
     const lum = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255;
     if (ST.alpha < 1) {
@@ -1629,9 +1716,9 @@ function render(cv, view, step) {
   } else if (view === 'step') {
     const so = Swap.cache.stepOf;
     const ed = outlineData().edge, pps = paperTex(W, H).s;
-    const HL = [232, 85, 62];
+    const HL = [232, 85, 62], sm = Swap.cache.steps && Swap.cache.steps[step] && Swap.cache.steps[step].mask, inS = sm ? (i => sm[i] === 1) : (i => so && so[i] === step);
     for (let i = 0; i < N; i++) {
-      if (so && so[i] === step) { const xx = i % W; let e = false; for (const o of [-2, -1, 1, 2]) { const xo = xx + o; if (xo >= 0 && xo < W && so[i + o] !== step) e = true; const yo = i + o * W; if (yo >= 0 && yo < N && so[yo] !== step) e = true; } if (e) { d[i * 4] = HL[0]; d[i * 4 + 1] = HL[1]; d[i * 4 + 2] = HL[2]; d[i * 4 + 3] = 255; continue; } }
+      if (inS(i)) { const xx = i % W; let e = false; for (const o of [-2, -1, 1, 2]) { const xo = xx + o; if (xo >= 0 && xo < W && !inS(i + o)) e = true; const yo = i + o * W; if (yo >= 0 && yo < N && !inS(yo)) e = true; } if (e) { d[i * 4] = HL[0]; d[i * 4 + 1] = HL[1]; d[i * 4 + 2] = HL[2]; d[i * 4 + 3] = 255; continue; } }
       const on = so && so[i] <= step; if (!on) { const k = 1 + .045 * pps[i]; put(i, [PAPER[0] * k, PAPER[1] * k, PAPER[2] * k], ed[i] * .55); continue; } put(i, on ? (pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : col[lab[i]]) : PAPER, on ? LN[i] * lk : ed[i] * .55); }
   } else if (view === 'sketch') {
     const sk = sketchData(), sl = sk.lab, f = Swap.skFill, EDGE = [84, 86, 100];
@@ -1833,7 +1920,22 @@ function autoSteps() {
     const tool = m.ph === 0 ? '粗头' : m.ph === 1 ? (m.area > N * .03 ? '中头' : '细头') : '细头';
     return {t: label + ' · ' + (p.name || no), tool, d: '用' + tool + '把框里的' + wh.slice(0, 3).join('、') + '涂满。', tip: CATS[cat].tip, nos: [no], wait: m.ph === 0};
   });
+  addGlaze(steps, stepOf, steps.findIndex(st => st.t === '点高光'));
   return {steps, stepOf};
+}
+/* 定光、罩阴影：所有颜色铺完、点高光之前，按定好的光把背光面和投影罩暗。这一步有自己的范围（红框） */
+function lightWord(lx, ly) { const a = Math.atan2(-ly, lx) * 180 / Math.PI; return a > 112 ? '左上' : a > 68 ? '正上方' : a > 0 ? '右上' : a > -90 ? '右边' : '左边'; }
+function addGlaze(steps, stepOf, at) {
+  const LF = lightField(); if (!LF.hasBg) return;
+  const r = Swap.res, N = r.W * r.H, mask = new Uint8Array(N); let n = 0;
+  for (let i = 0; i < N; i++) if (LF.tone[i] < -.45 || LF.cast[i] > .4) { mask[i] = 1; n++; }
+  if (n < N * .01) return;
+  const p = (rankPens([66, 8, -22], Swap.onlyHave, 1, true)[0] || {}).p; if (!p) return;
+  const k = at < 0 ? steps.length : at, wc = Swap.paintStyle !== 'mk', from = lightWord(LF.lx, LF.ly), hasCast = LF.cast.some(v => v > .4);
+  for (let i = 0; i < N; i++) if (stepOf[i] >= k) stepOf[i]++;
+  steps.splice(k, 0, {t: '定光 · 罩阴影', tool: wc ? '软头' : '中头', mask, nos: [p.no],
+    d: '光从' + from + '来。框里是背光的那半边' + (hasCast ? '和主体落在底色上的影子' : '') + '：用' + (p.name || p.no) + (wc ? '加水薄薄罩一层，' : '轻轻扫一层，') + '靠近轮廓的地方留一条亮边（反光）不要涂。',
+    tip: '阴影用冷色（蓝紫）罩，比直接用黑压暗通透得多；受光的那半边一笔都不要碰。', wait: true});
 }
 function aiSteps() {
   const a = Swap.ai, r = Swap.res, W = r.W, H = r.H, N = W * H, lab = absLabels();
@@ -1871,12 +1973,12 @@ function renderSteps() {
   const lk = Swap.lineOn ? .9 / 255 : 0, ol = outlineData().lab;
   steps.forEach((st, k) => {
     const cv = olist.querySelectorAll('canvas')[k]; cv.width = Math.ceil(W / sc); cv.height = Math.ceil(H / sc);
-    const x = cv.getContext('2d'), im = x.createImageData(cv.width, cv.height), d = im.data;
+    const x = cv.getContext('2d'), im = x.createImageData(cv.width, cv.height), d = im.data, sm = st.mask, inK = sm ? (i => sm[i] === 1) : (i => so[i] === k);
     for (let y = 0; y < cv.height; y++) for (let xx = 0; xx < cv.width; xx++) {
       const yy = Math.min(H - 1, y * sc), xs = Math.min(W - 1, xx * sc), i = yy * W + xs, on = so[i] <= k, c = on ? (pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : col[lab[i]]) : [251, 250, 246], o = (y * cv.width + xx) * 4;
       const e = !on && ((xs + sc < W && ol[i + sc] !== ol[i]) || (yy + sc < H && ol[i + sc * W] !== ol[i]));
       const a = on ? LN[i] * lk : e ? .55 : 0;
-      if (so[i] === k && ((xs + sc < W && so[i + sc] !== k) || (xs >= sc && so[i - sc] !== k) || (yy + sc < H && so[i + sc * W] !== k) || (yy >= sc && so[i - sc * W] !== k))) { d[o] = 232; d[o + 1] = 85; d[o + 2] = 62; d[o + 3] = 255; continue; }
+      if (inK(i) && ((xs + sc < W && !inK(i + sc)) || (xs >= sc && !inK(i - sc)) || (yy + sc < H && !inK(i + sc * W)) || (yy >= sc && !inK(i - sc * W)))) { d[o] = 232; d[o + 1] = 85; d[o + 2] = 62; d[o + 3] = 255; continue; }
       d[o] = c[0] + (36 - c[0]) * a; d[o + 1] = c[1] + (38 - c[1]) * a; d[o + 2] = c[2] + (50 - c[2]) * a; d[o + 3] = 255;
     }
     x.putImageData(im, 0, 0);
@@ -1967,6 +2069,7 @@ $('#nIn').addEventListener('input', e => { $('#nOut').value = e.target.value; Sw
 $('#detIn').addEventListener('input', e => { $('#detOut').value = e.target.value; Swap.detail = +e.target.value; clearTimeout(slideT); slideT = setTimeout(() => { Swap.cache = {}; render(); renderSwapList(); adjSum(); }, 200); });
 $('#depIn').addEventListener('input', e => { $('#depOut').value = e.target.value; Swap.depth = +e.target.value / 100; clearTimeout(slideT); slideT = setTimeout(() => { Swap.cache.pb = null; render(); renderSteps(); }, 150); });
 $('#vivIn').addEventListener('input', e => { $('#vivOut').value = e.target.value; Swap.vivid = +e.target.value / 100; clearTimeout(slideT); slideT = setTimeout(runAnalyze, 250); });
+$$('#lightP [data-light]').forEach(b => b.addEventListener('click', () => { Swap.light = b.dataset.light; Swap.cache.lf = null; Swap.cache.pb = null; $$('#lightP [data-light]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); renderSteps(); }));
 $$('#pStyle [data-ps]').forEach(b => b.addEventListener('click', () => { Swap.paintStyle = b.dataset.ps; Swap.cache.pb = null; $$('#pStyle [data-ps]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); renderSteps(); }));
 $('#onlyHave').addEventListener('change', e => { Swap.onlyHave = e.target.checked; Swap.cache = {marks: Swap.cache.marks}; Swap.rematch(); });
 
@@ -2044,6 +2147,7 @@ async function runAi(auto) {
   const what = Swap.kind === 'photo' ? '一张我自己拍的照片，我想把它画成一幅丙烯马克笔画' : '别人画的一幅丙烯马克笔画，我想用我自己的笔临摹';
   const prompt = '你是丙烯马克笔绘画老师，回答用简体中文。图片是' + what + '。\n\n我手上有的笔（色号 名字 色值）：\n' + avail + '\n\n程序已经把画面颜色对应到我的笔（色号 名字 占比 原图颜色）：\n' + used +
     '\n\n我喜欢抽象、鲜艳、有水彩感的画风：不用一比一照抄，可以概括形状、提炼和加强颜色，但要保留这张画最打动人的地方。请多讲怎么用丙烯马克笔做出水彩感（浅色先铺、趁上一层没干透叠下一层做过渡、笔尖轻扫做晕染边、留白透气、笔触顺着形体方向）。' +
+    '\n\n光影不要只照抄原图，要有你自己的设计：像画家那样定一个清楚的光源（程序这次定的是光从' + (() => { try { const L = lightField(); return lightWord(L.lx, L.ly); } catch (e) { return '左上'; } })() + '来，你觉得别的方向更好看可以改），给主体安排受光面、明暗交界、背光面、反光和落在底色上的投影；阴影用冷色（蓝紫）薄罩，受光面偏暖；大面积背景不要东一块西一块，做成有方向、分几层的渐变（靠光的那头浅，干了再叠一层）。步骤里要有一步专门「定光·罩阴影」。' +
     '\n\n请你像一位有十年经验、专门教丙烯马克笔的插画老师那样，把这张画专业地拆解给我，然后写一份像小红书「附过程」那样细的临摹步骤。\n' +
     '拆解要说到点子上：构图（视觉中心在哪、画面怎么分层：远/中/近）、光源（从哪边来、亮面暗面投影在哪）、配色（主色、辅助色、点缀色，冷暖关系）、难点（最容易画坏的地方和怎么处理）。\n' +
     '起稿：告诉我只需要先轻轻勾哪几条大轮廓（不超过 5 条，说清楚位置），哪些细节不用起稿、直接画。\n' +

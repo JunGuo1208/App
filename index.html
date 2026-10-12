@@ -153,6 +153,8 @@ h1,h2,h3,h4{text-wrap:balance}
 .btn svg{width:16px;height:16px;flex:none}
 .link{border:0;background:none;padding:0;color:var(--ink);text-decoration:underline;text-decoration-color:var(--ink-3);text-underline-offset:3px;cursor:pointer;font-size:13px;white-space:nowrap}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.autocrop{padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--paper) 88%,#E8553E);border:1px dashed color-mix(in srgb,var(--rule) 40%,#E8553E)}
+.autocrop .hint{flex:1 1 100%}
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .label{font-size:12.5px;color:var(--ink-2);letter-spacing:.06em}
 input[type=text],input[type=search],input[type=number],input[type=date],textarea,select{width:100%;border:0;background:var(--paper-2);color:var(--ink);border-radius:8px;padding:9px 11px;font-size:16px;box-shadow:inset 0 0 0 1px var(--rule);min-width:0}
@@ -558,6 +560,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           <div class="pills" role="group" aria-label="写什么" id="skLab"><button type="button" data-sl="num" aria-pressed="true">写编号</button><button type="button" data-sl="no" aria-pressed="false">写色号</button></div>
         </div>
         <div class="skkey" id="skKey" hidden></div>
+        <div class="row autocrop" id="autoCrop" hidden><span class="hint" id="autoCropMsg"></span><button class="btn small quiet" type="button" id="acEdit">调整框</button><button class="btn small quiet" type="button" id="acUndo">还原</button></div>
         <div class="row" id="cropBar" hidden><span class="hint">拖四个角，只框住画本身（去掉手、桌子、笔）。</span><button class="btn small primary" type="button" id="cropOk">确定裁剪</button><button class="btn small quiet" type="button" id="cropNo">取消</button></div>
         <div class="pick" id="pickOut" hidden></div>
       </div>
@@ -1255,7 +1258,7 @@ function analyze(cv, k, detail) {
   const light = new Float32Array(N);
   for (let i = 0; i < N; i++) light[i] = L[i * 3] > 80 && L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2] < 500 ? 1 : 0;
   const lightAround = gaussBlur(light, W, H, 3 * Math.max(1, W / 860)), glintRaw = new Float32Array(N);
-  for (let i = 0; i < N; i++) if ((light[i] && lightAround[i] < .4) || (Lraw[i] - Lm[i] > 16 && Lraw[i] > 72 && L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2] < 600 && lightAround[i] < .5)) glintRaw[i] = 1;
+  for (let i = 0; i < N; i++) if ((light[i] && lightAround[i] < .4) || (Lraw[i] - Lm[i] > 22 && Lraw[i] > 75 && L[i * 3 + 1] * L[i * 3 + 1] + L[i * 3 + 2] * L[i * 3 + 2] < 600 && lightAround[i] < .5)) glintRaw[i] = 1;
   const glint = gaussBlur(glintRaw, W, H, .6);
   const Lc = gaussBlur(Lraw, W, H, 1.2);
   return {W, H, centers, labels: lab, lines, Lc, thin, glint, lineRatio: dl / N, crisp: crisp / N};
@@ -1306,6 +1309,8 @@ async function setWork(cv, opts) {
   if (opts.style != null) setStyle(opts.style, true);
   if (Swap.view === 'step') Swap.view = 'pens';
   Swap.lineUser = false; Swap.ai = opts.ai || null; Swap.procMode = Swap.ai ? 'ai' : 'auto'; Swap.cropped = false; endCrop();
+  Swap.uncrop = null; Swap.autoBox = null; $('#autoCrop').hidden = true; const cropTok = ++autoCropTok;
+  if (opts.autoCrop && Swap.kind === 'art') { const rc = detectCard(Swap.work); if (rc) applyAutoCrop(rc, '自动'); }
   $('#srcTitle').textContent = opts.title || (Swap.kind === 'photo' ? '我的照片' : '参考图');
   $('#srcKind').textContent = Swap.kind === 'photo' ? '照片 → 画稿' : '参考图';
   $('#pickOut').hidden = true; $('#pin').hidden = true;
@@ -1313,6 +1318,7 @@ async function setWork(cv, opts) {
   renderItemBar();
   $('#saveWant').textContent = it ? '更新这张的配色' : '存进「想画」';
   await runAnalyze();
+  if (opts.autoCrop && Swap.kind === 'art' && !Swap.uncrop) aiCrop(cropTok);
 }
 function setKind(k, silent) {
   Swap.kind = k;
@@ -1532,19 +1538,25 @@ function lightField() {
   const lx = L2[0] / Math.hypot(L2[0], L2[1]), ly = L2[1] / Math.hypot(L2[0], L2[1]);
   // 受光 / 交界 / 背光 / 反光，归成几块面（水彩不是渐变喷枪，是一块一块的面）
   const sst = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
-  const tone = new Float32Array(n2_), core = new Float32Array(n2_);
+  const tone = new Float32Array(n2_), core = new Float32Array(n2_), glz = new Float32Array(n2_), hil = new Float32Array(n2_);
   for (let j = 0; j < n2_; j++) {
     if (!form[j]) continue;
     const s2 = lamOf(lx, ly, j) / .35, lit = sst(.1, .36, s2), sh = sst(-.04, -.34, s2);
     const refl = sh * (hasBg ? (1 - sst(0, RG * .2, dG[j])) * .45 : 0);
     tone[j] = lit - sh * .85 + refl; core[j] = sh * (1 - sst(-.3, -.7, s2)) * (1 - refl * 2) * .7;
+    // 阴影是「一层罩上去的透明冷色」：边是利落的（干了的水彩边），离轮廓近的地方留一条反光不罩
+    glz[j] = sst(-.06, -.16, s2) * (1 - refl * 1.6);
+    // 受光最亮的那一小块直接留白纸（水彩的高光是留出来的，不是涂白）
+    const md = mxD[fc[j]], R = Math.max(2, Math.min(RG, md * .85));
+    hil[j] = md > 6 ? sst(.62, .82, s2) * sst(R * .2, R * .45, dG[j]) : 0;
   }
   // 投影：主体往背光的方向挪一点、糊开，落在背景上；贴着主体的地方再暗一圈
   const cast = new Float32Array(n2_);
   if (hasBg) {
     const ox = Math.round(-lx * RG * .32), oy = Math.round(-ly * RG * .32), sh = new Float32Array(n2_);
     for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) { const sx = x - ox, sy = y - oy; if (sx >= 0 && sy >= 0 && sx < w2 && sy < h2 && form[sy * w2 + sx]) sh[y * w2 + x] = 1; }
-    const a = gaussBlur(sh, w2, h2, RG * .16), ao = gaussBlur(Float32Array.from(form), w2, h2, RG * .06);
+    // 影子：贴着物体的那头边是利落的，越远越淡越软（真实的投影就是这样）
+    const a = gaussBlur(sh, w2, h2, RG * .05), a2 = gaussBlur(sh, w2, h2, RG * .16), ao = gaussBlur(Float32Array.from(form), w2, h2, RG * .06);
     // 天空不接影子：靠上、贴着上边的大底色当天空，云和山不往天上投影
     const cy = new Float64Array(256), cn = new Float64Array(256), top = new Uint8Array(256);
     for (let j = 0; j < n2_; j++) if (!sub[j]) { cy[lb[j]] += (j / w2 | 0) / h2; cn[lb[j]]++; if (j < w2) top[lb[j]] = 1; }
@@ -1553,7 +1565,7 @@ function lightField() {
     const Lk = Swap.map.map(m => m.no ? hexLab(penByNo(m.no).hex)[0] : m.c.lab[0]);
     const grounds = []; cn.forEach((c, k) => { if (c > n2_ * .03 && Lk[k] < 88) grounds.push(k); });
     const one = grounds.length === 1 && !sky[grounds[0]] ? grounds[0] : -1;
-    for (let j = 0; j < n2_; j++) if (!sub[j] && lb[j] === one) cast[j] = Math.min(1, sst(.08, .6, a[j]) * .85 + ao[j] * .5);
+    for (let j = 0; j < n2_; j++) if (!sub[j] && lb[j] === one) cast[j] = Math.min(1, Math.max(sst(.42, .58, a[j]) * .9, sst(.1, .6, a2[j]) * .55) + ao[j] * .35);
   }
   const up = (src) => { const o = new Float32Array(N);
     for (let y = 0; y < H; y++) { const fy = Math.max(0, Math.min(h2 - 1.001, y / 2)), y0 = fy | 0, ty = fy - y0, y1 = Math.min(h2 - 1, y0 + 1);
@@ -1561,7 +1573,7 @@ function lightField() {
         o[y * W + x] = (src[y0 * w2 + x0] * (1 - tx) + src[y0 * w2 + x1] * tx) * (1 - ty) + (src[y1 * w2 + x0] * (1 - tx) + src[y1 * w2 + x1] * tx) * ty; } }
     return o; };
   let anyForm = 0; for (let j = 0; j < n2_; j++) if (form[j]) { anyForm = 1; break; }
-  return (Swap.cache.lf = {tone: up(tone), core: up(core), cast: up(cast), lx, ly, hasBg: hasBg && !!anyForm});
+  return (Swap.cache.lf = {tone: up(tone), core: up(core), cast: up(cast), glz: up(glz), hil: up(hil), lx, ly, hasBg: hasBg && !!anyForm});
 }
 /* 分层罩染（水彩的平涂 + 叠色）：大面积底色不跟着照片的噪点走，像在斜放的画板上一层层上水彩——
    1 量出原画整片底色「哪边亮、哪边暗」的大方向（一个斜面）
@@ -1599,6 +1611,7 @@ function washField(lab, big, Lc, W, H, depth, LF) {
     let skyTop = false, cyS = 0, bx0 = W, bx1 = 0, by0 = H, by1 = 0; { let cnS = 0; for (let i = 0; i < N; i += 3) if (big[i] && lab[i] === k) { const yy = i / W | 0, xx = i % W; cyS += yy / H; cnS++; if (i < W * 2) skyTop = true; if (xx < bx0) bx0 = xx; if (xx > bx1) bx1 = xx; if (yy < by0) by0 = yy; if (yy > by1) by1 = yy; } cyS /= Math.max(1, cnS); }
     // 又宽又扁的一条（天边、海面、草地）也按横向分层：上半部越往下越浅，下半部越往近处越深
     const flatBand = (bx1 - bx0) > (by1 - by0) * 1.4;
+    const terr = (skyTop && cyS < .45) || flatBand;
     if ((skyTop && cyS < .45) || (flatBand && cyS < .5)) { gx = 0; gy = 1; } else if (flatBand) { gx = 0; gy = -1; } else if (LF) { gx = LF.lx; gy = LF.ly; } else if (Math.hypot(gx, gy) < 4) { gx = gx * .3; gy = 6; }
     const gl = Math.hypot(gx, gy), dx = gx / gl, dy = gy / gl;
     let pmin = 1e9, pmax = -1e9;
@@ -1609,19 +1622,20 @@ function washField(lab, big, Lc, W, H, depth, LF) {
       const u = x / W, w = y / H, p = (u * dx + w * dy - pmin) / span, perp = (-u * dy + w * dx) * W / sc;
       // 0 = 暗的一头，1 = 亮的一头；台阶边用笔刷拖出来的那种轻微起伏
       const g = (p - .5) * 2 * 8 + n1(perp / 300 + k * 3.1) * .8 + n1(perp / 45 + k * 1.7) * .18;
-      const s2 = g / step, fl = Math.floor(s2), fr = s2 - fl, e = fr < .7 ? 0 : fr > .9 ? 1 : (fr - .7) / .2, sm = e * e * (3 - 2 * e);
+      // 天空、海面这种横条：分几层台阶；物体后面的衬底：一整片顺滑的渐变（不出台阶边，免得像物体的影子）
+      const s2 = g / step, fl = terr ? Math.floor(s2) : s2, fr = terr ? s2 - fl : 0, e = fr < .7 ? 0 : fr > .9 ? 1 : (fr - .7) / .2, sm = terr ? e * e * (3 - 2 * e) : 0;
       const plane = mL + fgx * (u - .5 - mu) + fgy * (w - .5 - mw);
-      const fine = Math.max(-5, Math.min(5, (Ls[i] - plane) * depth * .8));
+      const fine = 4.5 * Math.tanh((Ls[i] - plane) * depth * .8 / 4.5);
       const ddx = (u - .5) * 2, ddy = (w - .48) * 2, rr = Math.min(1, Math.hypot(ddx, ddy) / 1.3);
       v[i] = (fl + sm) * step + fine - 6 * rr * rr * rr + 2;
-      rim[i] = fr > .62 && fr < .78 ? 1 - Math.abs(fr - .7) / .08 : 0;
+      rim[i] = terr && fr > .62 && fr < .78 ? 1 - Math.abs(fr - .7) / .08 : 0;
     }
   }
   return {v, rim};
 }
 /* 两种画风：水彩感（透明、浅、软边、多露纸）和马克笔厚涂（不透明、笔道明显） */
 const STYLES = {
-  wc: {alpha: .74, alphaVar: .16, overlap: .02, edge: .06, gran: .75, gap: .1, down: .55, ink: .72, soft: true},
+  wc: {alpha: .74, alphaVar: .16, overlap: .02, edge: .16, gran: .75, gap: .045, down: .55, ink: .72, soft: true},
   mk: {alpha: 1, alphaVar: 0, overlap: .06, edge: .1, gran: .55, gap: .05, down: 1, ink: .92, soft: false}
 };
 function paintBuf() {
@@ -1631,8 +1645,11 @@ function paintBuf() {
   const K = Swap.map.length, sumL = new Float64Array(K), cnt = new Float64Array(K), depth = Swap.depth == null ? .7 : Swap.depth;
   for (let i = 0; i < N; i++) { sumL[labP[i]] += Lc[i]; cnt[labP[i]]++; }
   // 白和很浅的颜色压暗时不要变灰变黄：水彩里白的阴影是一层淡淡的蓝紫
-  const lut = Swap.map.map((m) => { const p = m.no ? penByNo(m.no) : null, pl = p ? hexLab(p.hex) : m.c.lab, t = [], cool = pl[0] > 78 && Math.hypot(pl[1], pl[2]) < 16 ? Math.min(1, (pl[0] - 78) / 10) : 0; for (let k = -30; k <= 30; k++) t.push(lab2rgb(Math.max(0, Math.min(100, pl[0] + k)), pl[1] + (k < 0 ? -k * .1 * cool : 0), pl[2] + (k < 0 ? k * .45 * cool : 0))); return t; });
+  const lut = Swap.map.map((m) => { const p = m.no ? penByNo(m.no) : null, pl = p ? hexLab(p.hex) : m.c.lab, t = [], cool = pl[0] > 78 && Math.hypot(pl[1], pl[2]) < 16 && pl[2] + pl[1] * .5 < 6 ? Math.min(1, (pl[0] - 78) / 10) : 0; for (let k = -30; k <= 30; k++) t.push(lab2rgb(Math.max(0, Math.min(100, pl[0] + k)), pl[1] + (k < 0 ? -k * .1 * cool : 0), pl[2] + (k < 0 ? k * .45 * cool : 0))); return t; });
   const meanL = Array.from(sumL, (v, k) => cnt[k] ? v / cnt[k] : 50);
+  const penC = Swap.map.map(m => { const pl = m.no ? hexLab(penByNo(m.no).hex) : m.c.lab; return Math.hypot(pl[1], pl[2]); });
+  // 这支笔偏暖还是偏冷（肤色、米白也算暖）
+  const penW = Swap.map.map(m => { const pl = m.no ? hexLab(penByNo(m.no).hex) : m.c.lab; return Math.max(0, Math.min(1, (pl[2] + pl[1] * .5) / 10)); });
   const D = new Uint8Array(N).fill(8);
   for (let i = 0; i < N; i++) { const x = i % W; if ((x > 0 && lab[i - 1] !== lab[i]) || (x < W - 1 && lab[i + 1] !== lab[i]) || (i >= W && lab[i - W] !== lab[i]) || (i + W < N && lab[i + W] !== lab[i])) D[i] = 0; }
   for (let i = 0; i < N; i++) { const x = i % W; let v = D[i]; if (x > 0) v = Math.min(v, D[i - 1] + 1); if (i >= W) v = Math.min(v, D[i - W] + 1); D[i] = v; }
@@ -1640,12 +1657,17 @@ function paintBuf() {
   const ang = list.map(c => { const w = c.maxx - c.minx + 1, h = c.maxy - c.miny + 1; return (w >= h * .8 ? 0 : Math.PI / 2) + h1(c.id * 7.3) * .3; });
   const cs = ang.map(Math.cos), sn = ang.map(Math.sin), sc = Math.max(1, W / 860), tip = 9 * sc, out = new Uint8ClampedArray(N * 4);
   const PT = paperTex(W, H), ph = PT.h, ps = PT.s, LF = lightField(), mixK = Swap.cache.mixK, mixA = Swap.cache.mixA, wash = washField(lab, Swap.cache.big, Lc, W, H, depth, LF);
+  // 手画的边不是电脑算出来的光滑线：交界附近按噪声把取色的位置推一推，边就有了手抖和水渍的起伏
+  const wob = ST.soft ? 1.8 * sc : .9 * sc;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = y * W + x, ci = comp[i], vp = labP[i], wv = wash ? wash.v[i] : NaN, inW = wv === wv;
+    const i0 = y * W + x;
+    let i = i0;
+    if (D[i0] < 4) { const wx = Math.round(x + n2(x / (11 * sc) + 3.1, y / (11 * sc)) * wob + n2(x / (4 * sc), y / (4 * sc) + 8.2) * wob * .45), wy = Math.round(y + n2(x / (11 * sc) + 9.7, y / (11 * sc) + 4.4) * wob + n2(x / (4 * sc) + 5.5, y / (4 * sc)) * wob * .45); if (wx >= 0 && wy >= 0 && wx < W && wy < H) i = wy * W + wx; }
+    const ci = comp[i], vp = labP[i], wv = wash ? wash.v[i] : NaN, inW = wv === wv;
     // 主体：原图的明暗只留一半当细节，体积感交给定好的光；背景：分层罩染 + 投影
     const tn = LF.tone[i], cr = LF.core[i], cs = LF.cast[i];
     const ma = mixA ? mixA[i] : 0;
-    const dRaw = inW ? wv - cs * 16 * (.5 + depth * .7) : (Lc[i] - (ma > .02 ? meanL[vp] + (meanL[mixK[i]] - meanL[vp]) * ma : meanL[vp])) * depth * (LF.hasBg ? .55 : 1) + (tn * (tn > 0 ? 8 : 13) - cr * 7) * (.4 + depth * .9), dL = Math.max(-30, Math.min(30, Math.round(dRaw < 0 ? dRaw * ST.down : dRaw))), c0 = lut[vp][dL + 30], c = ma > .02 ? (() => { const c2 = lut[mixK[i]][dL + 30]; return [c0[0] + (c2[0] - c0[0]) * ma, c0[1] + (c2[1] - c0[1]) * ma, c0[2] + (c2[2] - c0[2]) * ma]; })() : c0;
+    const dRaw = inW ? wv - cs * 16 * (.5 + depth * .7) : (Lc[i] - (ma > .02 ? meanL[vp] + (meanL[mixK[i]] - meanL[vp]) * ma : meanL[vp])) * depth * (LF.hasBg ? .55 : 1) + (tn * (tn > 0 ? 8 : 6) - cr * 4) * (.4 + depth * .9), dL = Math.max(-30, Math.min(30, Math.round(dRaw < 0 ? dRaw * ST.down : dRaw))), c0 = lut[vp][dL + 30], c = ma > .02 ? (() => { const c2 = lut[mixK[i]][dL + 30]; return [c0[0] + (c2[0] - c0[0]) * ma, c0[1] + (c2[1] - c0[1]) * ma, c0[2] + (c2[2] - c0[2]) * ma]; })() : c0;
     const u = x * cs[ci] + y * sn[ci], v = -x * sn[ci] + y * cs[ci];
     // 笔道：每条宽一个笔头，边缘轻微抖动；两条笔道交叠处（t 接近 0）多一层颜料
     const band = v / tip + n1(u / (38 * sc) + ci * 5.3) * .25, t = band - Math.floor(band), overlap = t < .14 ? (1 - t / .14) : 0;
@@ -1653,25 +1675,41 @@ function paintBuf() {
     let f = 1 - ST.overlap * overlap * (inW ? .4 : 1) + .03 * dens;
     // 每一层罩染干了以后边上会留一条略深的水痕，这就是层次的「结构线」
     if (inW) f *= 1 - .05 * wash.rim[i];
-    const dd = D[i], hard = Math.max(0, 1 - ma * 2.4); if (dd < 4) f *= 1 - ST.edge * hard * (1 - dd / 4);
-    f *= 1 + .07 * ps[i];
+    const dd = D[i], hard = Math.max(0, 1 - ma * 2.4); if (dd < 4) f *= 1 - ST.edge * hard * (1 - dd / 4) * (1 - dd / 4);
+    f *= 1 + .07 * ps[i0];
     // 冷暖：受光面带一点暖黄，背光面和投影里罩一点蓝紫
     const tw = (inW ? -cs : tn - cr * .5) * (.4 + depth * .6);
-    let R = c[0] * f * (1 + (tw > 0 ? .03 : .07) * tw), G = c[1] * f * (1 + (tw > 0 ? .012 : .035) * tw), B = c[2] * f * (1 - (tw > 0 ? .06 : .02) * tw);
+    let R = c[0] * f * (1 + (tw > 0 ? .03 : .03) * tw), G = c[1] * f * (1 + (tw > 0 ? .012 : .015) * tw), B = c[2] * f * (1 - (tw > 0 ? .06 : .01) * tw);
+    // 阴影罩色：像用一支浅蓝紫的笔在背光面、投影上薄罩一层（正片叠底），颜色更通透，不是简单变黑
+    const gz = Math.min(1, (inW ? cs : LF.glz[i] * .9 + cr * .25) * (.45 + depth * .65));
+    if (gz > .01) {
+      const lumG = (R * .3 + G * .59 + B * .11) / 255, kz = gz * (lumG < .2 ? .35 : 1) * (1 - .3 * Math.max(0, Math.min(1, (lumG - .75) / .17)));
+      // 暖色（肤色、橙、红、黄）的影子是暖的玫瑰棕，冷色的影子才是蓝紫，不然皮肤会像淤青
+      const warm = Math.max(penW[vp], Math.max(0, Math.min(1, (R - B) / 70)));
+      R *= 1 - kz * (.3 - .18 * warm); G *= 1 - kz * (.25 + .06 * warm); B *= 1 - kz * (.07 + .17 * warm);
+      // 罩色的边干了会留一条深一点的水痕
+      const e = inW ? cs : LF.glz[i]; if (e > .3 && e < .7) { const rr = 1 - Math.abs(e - .5) / .2; R *= 1 - .07 * rr; G *= 1 - .07 * rr; B *= 1 - .05 * rr; }
+    }
     // 水彩是透明的：颜色和纸叠在一起，浓淡不匀；深色笔盖得住一些
     const lum = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255;
     if (ST.alpha < 1) {
       // 罩染：叠的层数越多（越深）颜色越实，浅的地方薄薄一层透纸
       const lay = inW ? Math.max(-.12, Math.min(.16, -wv / 60)) : 0;
       // 很浅的颜色（肤色、浅粉、浅蓝）本来就淡，再透明就成白纸了：浅色反而要涂实一点
-      const al = lum < .25 ? Math.max(.9, Math.min(1, .95 + ST.alphaVar * .25 * dens)) : Math.max(lum > .72 ? .9 : .5, Math.min(1, ST.alpha + lay + ST.alphaVar * dens + (lum < .4 ? .1 : 0) + Math.max(0, lum - .6) * .6));
+      // 全部用平滑过渡（不能有「低于某个亮度就突然变实」这种硬门槛，不然渐变底色上会出一圈圈的边）
+      const ss = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+      const alMid = Math.max(.5 + .4 * ss(.66, .78, lum), Math.min(1, ST.alpha + lay + ST.alphaVar * dens + .1 * ss(.46, .34, lum) + Math.max(0, lum - .6) * .6 + Math.max(0, Math.min(1, (penC[vp] - 30) / 30)) * .16));
+      const alDark = Math.max(.9, Math.min(1, .95 + ST.alphaVar * .25 * dens)), kD = ss(.3, .2, lum);
+      const al = alMid + (alDark - alMid) * kD;
       R = 250 + (R - 250) * al; G = 249 + (G - 249) * al; B = 244 + (B - 244) * al;
     }
+    // 受光最亮处留白：透出纸色
+    const hl = LF.hil[i]; if (hl > .02) { const a = hl * (ST.alpha < 1 ? .8 : .6); R += (251 - R) * a; G += (250 - G) * a; B += (245 - B) * a; }
     // 纸纹凹处颜料挂不满，透一点纸白；交界处留一条很细的纸缝
-    let paper = ph[i] < -.3 ? (-ph[i] - .3) * ST.gran * Math.max(.12, Math.min(1, lum / .45)) : 0;
-    if (dd === 0 && hard > .5) paper = Math.max(paper, (ST.gap + Math.max(0, -ph[i]) * .22) * hard);
+    let paper = ph[i0] < -.3 ? (-ph[i0] - .3) * ST.gran * Math.max(.12, Math.min(1, lum / .45)) : 0;
+    if (dd === 0 && hard > .5) paper = Math.max(paper, (ST.gap + Math.max(0, -ph[i0]) * .22) * hard);
     if (paper > 0) { R += (250 - R) * paper; G += (249 - G) * paper; B += (244 - B) * paper; }
-    out[i * 4] = R; out[i * 4 + 1] = G; out[i * 4 + 2] = B; out[i * 4 + 3] = 255;
+    out[i0 * 4] = R; out[i0 * 4 + 1] = G; out[i0 * 4 + 2] = B; out[i0 * 4 + 3] = 255;
   }
   // 水彩的边是软的：交界处颜色互相晕开一点，块面里也略微柔一点
   if (ST.soft) {
@@ -1685,6 +1723,19 @@ function paintBuf() {
     if (th > .05) { const a = Math.min(1, th * 2) * Math.max(ST.ink, .86), o = i * 4; out[o] += (30 - out[o]) * a; out[o + 1] += (28 - out[o + 1]) * a; out[o + 2] += (36 - out[o + 2]) * a; }
     if (gl > .08) { const a = Math.min(1, gl * 1.6) * .92, o = i * 4; out[o] += (252 - out[o]) * a; out[o + 1] += (251 - out[o + 1]) * a; out[o + 2] += (247 - out[o + 2]) * a; }
   }
+  // 水彩画的外边：颜料刷到纸边附近就停了，留一圈不规则的白纸边，边上颜料积一点，像一张真的水彩小稿
+  const deckM = new Float32Array(N);
+  if (ST.soft) {
+    const m0 = Math.min(W, H) * .022;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const dEdge = Math.min(x, y, W - 1 - x, H - 1 - y); if (dEdge > m0 * 3) continue;
+      const along = x + y * 1.7, wob2 = n1(along / (90 * sc) + 2.2) * m0 * .6 + n1(along / (28 * sc) + 7.1) * m0 * .16 + n2(x / (9 * sc), y / (9 * sc)) * m0 * .05;
+      const t = (dEdge - (m0 + wob2)) / (1.3 * sc), i = y * W + x, o = i * 4;
+      if (t < 0) { deckM[i] = 1; out[o] = 250 + 2 * ps[i]; out[o + 1] = 249 + 2 * ps[i]; out[o + 2] = 244 + 2 * ps[i]; }
+      else if (t < 2.6) { const k = t < 1 ? t : 1; deckM[i] = 1 - k; const rim = t < 2.6 ? .1 * (1 - Math.abs(t - 1.3) / 1.3) : 0; for (let ch = 0; ch < 3; ch++) { const pc = [250, 249, 244][ch]; out[o + ch] = (pc + (out[o + ch] - pc) * k) * (1 - Math.max(0, rim)); } }
+    }
+  }
+  Swap.cache.deck = deckM;
   return (Swap.cache.pb = out);
 }
 /* 画稿用的干净分区：同一支笔的块合并，抹平毛边，太碎的并进旁边；编号按面积从大到小 */
@@ -1791,7 +1842,8 @@ function render(cv, view, step) {
       d[i * 4] = c[0] + (EDGE[0] - c[0]) * e; d[i * 4 + 1] = c[1] + (EDGE[1] - c[1]) * e; d[i * 4 + 2] = c[2] + (EDGE[2] - c[2]) * e; d[i * 4 + 3] = 255;
     }
   } else if (pb) {
-    for (let i = 0; i < N; i++) { const a = LN[i] * lk * .75, R = pb[i * 4], G = pb[i * 4 + 1], B = pb[i * 4 + 2]; d[i * 4] = R + (R * .28 + 14 - R) * a; d[i * 4 + 1] = G + (G * .28 + 14 - G) * a; d[i * 4 + 2] = B + (B * .3 + 18 - B) * a; d[i * 4 + 3] = 255; }
+    const dk = Swap.cache.deck;
+    for (let i = 0; i < N; i++) { const a = LN[i] * lk * .75 * (dk ? 1 - dk[i] : 1), R = pb[i * 4], G = pb[i * 4 + 1], B = pb[i * 4 + 2]; d[i * 4] = R + (R * .28 + 14 - R) * a; d[i * 4 + 1] = G + (G * .28 + 14 - G) * a; d[i * 4 + 2] = B + (B * .3 + 18 - B) * a; d[i * 4 + 3] = 255; }
   } else {
     for (let i = 0; i < N; i++) put(i, col[lab[i]], LN[i] * lk);
   }
@@ -2141,7 +2193,7 @@ async function takeFile(file) {
   try {
     const cv = await fileToCanvas(file, 1400);
     const sh = Swap.kind === 'art' ? parseShare($('#shareIn').value) : null;
-    await setWork(cv, {kind: Swap.kind, style: Swap.kind === 'photo' && Swap.styleUser ? Swap.style : '', title: sh && sh.title ? sh.title : (Swap.kind === 'photo' ? '我的照片' : (file.name || '参考图').replace(/\.[^.]+$/, '')), share: sh});
+    await setWork(cv, {autoCrop: true, kind: Swap.kind, style: Swap.kind === 'photo' && Swap.styleUser ? Swap.style : '', title: sh && sh.title ? sh.title : (Swap.kind === 'photo' ? '我的照片' : (file.name || '参考图').replace(/\.[^.]+$/, '')), share: sh});
     showTab('swap'); if ($('#dlgSrc').open) $('#dlgSrc').close();
   } catch (e) { toast('这张图打不开，换 JPG 或 PNG 试试。'); }
 }
@@ -2248,6 +2300,118 @@ function cleanAi(r) {
 }
 
 /* ================= 裁剪 ================= */
+/* 自动找画卡：从图片四周取「桌面/手/背景」的颜色，从边上往里吃掉和它像的部分，
+   剩下最大、方方正正的那一块就是画。找不到明确的画卡（比如整张图都是画）就不裁 */
+function detectCard(src, why) {
+  const no = r => { if (why) why.r = r; return null; };
+  const S = 320, k = Math.min(1, S / Math.max(src.width, src.height)), w = Math.max(16, Math.round(src.width * k)), h = Math.max(16, Math.round(src.height * k)), N = w * h;
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.drawImage(src, 0, 0, w, h);
+  const d = boxBlur(x.getImageData(0, 0, w, h).data, w, h, 1), L = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) { const l = rgb2lab(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]); L[i * 3] = l[0]; L[i * 3 + 1] = l[1]; L[i * 3 + 2] = l[2]; }
+  const lab = i => [L[i * 3], L[i * 3 + 1], L[i * 3 + 2]];
+  const bw = Math.max(2, Math.round(Math.min(w, h) * .025)), border = [];
+  for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++) if (xx < bw || yy(y) || xx >= w - bw) border.push(y * w + xx);
+  function yy(y) { return y < bw || y >= h - bw; }
+  // 边上的颜色分 4 类，占边框 18% 以上、颜色又比较匀的才算「背景」
+  const K = 4, rnd = mulberry(9), C = [];
+  for (let j = 0; j < K; j++) C.push(lab(border[Math.floor(rnd() * border.length)]));
+  let as = new Int8Array(border.length);
+  for (let it = 0; it < 8; it++) {
+    border.forEach((p, n) => { let b = 0, bd = 1e9; for (let j = 0; j < K; j++) { const v = dE(lab(p), C[j]); if (v < bd) { bd = v; b = j; } } as[n] = b; });
+    for (let j = 0; j < K; j++) { let s0 = 0, s1 = 0, s2 = 0, n0 = 0; border.forEach((p, n) => { if (as[n] === j) { s0 += L[p * 3]; s1 += L[p * 3 + 1]; s2 += L[p * 3 + 2]; n0++; } }); if (n0) C[j] = [s0 / n0, s1 / n0, s2 / n0]; }
+  }
+  const bg = [];
+  for (let j = 0; j < K; j++) { let n0 = 0, sp = 0; border.forEach((p, n) => { if (as[n] === j) { n0++; sp += dE(lab(p), C[j]); } }); const Cc = Math.hypot(C[j][1], C[j][2]), skin = C[j][0] > 45 && C[j][1] > 6 && C[j][1] < 32 && C[j][2] > 8 && C[j][2] < 38; if (n0 > border.length * .18 && sp / n0 < 9 && (Cc < 15 || skin)) bg.push(C[j]); }
+  // 桌面、白纸、黑桌、手才算背景；边上是蓝天绿底这种「画出来的颜色」就说明画铺满了，不裁
+  if (!bg.length) return no('nobg');
+  // 从边往里漫：和背景色像、和旁边一格也像，就算背景
+  const isBg = new Uint8Array(N), q = new Int32Array(N); let qh = 0, qt = 0;
+  const near = i => { const v = lab(i); for (const b of bg) if (dE(v, b) < 12) return true; return false; };
+  for (const p of border) if (!isBg[p] && near(p)) { isBg[p] = 1; q[qt++] = p; }
+  while (qh < qt) {
+    const p = q[qh++], px = p % w, py = (p / w) | 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = px + dx, ny = py + dy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const n = ny * w + nx; if (isBg[n]) continue;
+      // 桌面是平滑的，画卡的边是一道台阶：一步变化太大就停，漫不进画里（白纸画卡和灰桌面也分得开）
+      if (near(n) && dE(lab(n), lab(p)) < 3.2) { isBg[n] = 1; q[qt++] = n; }
+    }
+  }
+  if (why) { why.mask = isBg; why.w = w; why.h = h; }
+  // 去掉细的连接（手指、笔杆搭在画上），再取最大的一块
+  const fg = new Uint8Array(N); for (let i = 0; i < N; i++) fg[i] = isBg[i] ? 0 : 1;
+  const morph = (m, er) => { const o = new Uint8Array(N); for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++) { let v = er ? 1 : 0; for (let dy = -2; dy <= 2 && v === (er ? 1 : 0); dy++) for (let dx = -2; dx <= 2; dx++) { const ny = Math.min(h - 1, Math.max(0, y + dy)), nx = Math.min(w - 1, Math.max(0, xx + dx)); if (er ? !m[ny * w + nx] : m[ny * w + nx]) { v = er ? 0 : 1; break; } } o[y * w + xx] = v; } return o; };
+  const op = morph(morph(fg, true), false), cid = new Int32Array(N).fill(-1); let best = null;
+  for (let s0 = 0; s0 < N; s0++) {
+    if (!op[s0] || cid[s0] >= 0) continue;
+    let a = 0, x0 = w, x1 = 0, y0 = h, y1 = 0; qh = qt = 0; q[qt++] = s0; cid[s0] = s0;
+    while (qh < qt) { const p = q[qh++], px = p % w, py = (p / w) | 0; a++; if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = px + dx, ny = py + dy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue; const n = ny * w + nx; if (op[n] && cid[n] < 0) { cid[n] = s0; q[qt++] = n; } } }
+    if (!best || a > best.a) best = {a, x0, x1, y0, y1, id: s0};
+  }
+  if (!best) return no('nofg');
+  // 行、列方向上把稀疏的边修掉（伸进来的手、斜放的卡角）
+  const inC = (xx, y) => cid[y * w + xx] === best.id;
+  const rowF = y => { let n = 0; for (let xx = best.x0; xx <= best.x1; xx++) if (inC(xx, y)) n++; return n / (best.x1 - best.x0 + 1); };
+  const colF = xx => { let n = 0; for (let y = best.y0; y <= best.y1; y++) if (inC(xx, y)) n++; return n / (best.y1 - best.y0 + 1); };
+  // 每次只削最空的那一条边，削完重新算（连着的一条桌面碎边、斜放的卡角都能削掉，画本身不会被削没）
+  for (let g = 0; g < w + h; g++) {
+    if (best.x1 - best.x0 < 10 || best.y1 - best.y0 < 10) break;
+    const f = [rowF(best.y0), rowF(best.y1), colF(best.x0), colF(best.x1)], m = Math.min(...f);
+    if (m >= .85) break;
+    const k = f.indexOf(m); if (k === 0) best.y0++; else if (k === 1) best.y1--; else if (k === 2) best.x0++; else best.x1--;
+  }
+  const bw2 = best.x1 - best.x0 + 1, bh2 = best.y1 - best.y0 + 1, area = bw2 * bh2;
+  let fill = 0; for (let y = best.y0; y <= best.y1; y++) for (let xx = best.x0; xx <= best.x1; xx++) if (inC(xx, y)) fill++;
+  fill /= area;
+  if (area < N * .12 || area > N * .9 || fill < .8) return no('area ' + (area / N).toFixed(2) + ' fill ' + fill.toFixed(2));
+  // 背景要真的「围着」画：图片四周一圈里背景占一半以上，画的四条边外面至少三条是背景（贴着图片边的那条也算）
+  let rb = 0; for (const p of border) rb += isBg[p];
+  if (rb < border.length * .5) return no('ring ' + (rb / border.length).toFixed(2));
+  const sw = Math.max(2, Math.round(Math.min(w, h) * .03)), side = (xa, xb, ya, yb) => { xa = Math.max(0, xa); ya = Math.max(0, ya); xb = Math.min(w - 1, xb); yb = Math.min(h - 1, yb); if (xb < xa || yb < ya) return 1; let n = 0, t = 0; for (let y = ya; y <= yb; y++) for (let xx = xa; xx <= xb; xx++) { t++; n += isBg[y * w + xx]; } return n / t; };
+  const ex = Math.round(w * .03), ey = Math.round(h * .03);
+  const sides = [best.y0 <= ey ? 1 : side(best.x0, best.x1, best.y0 - sw, best.y0 - 1), best.y1 >= h - 1 - ey ? 1 : side(best.x0, best.x1, best.y1 + 1, best.y1 + sw), best.x0 <= ex ? 1 : side(best.x0 - sw, best.x0 - 1, best.y0, best.y1), best.x1 >= w - 1 - ex ? 1 : side(best.x1 + 1, best.x1 + sw, best.y0, best.y1)];
+  if (sides.some(v => v < .5)) return no('sides ' + sides.map(v => v.toFixed(2)).join(','));
+  // 往里收一点，去掉卡边和阴影
+  const ix = bw2 * .015 + 1, iy = bh2 * .015 + 1;
+  return [(best.x0 + ix) / w, (best.y0 + iy) / h, (best.x1 + 1 - ix) / w, (best.y1 + 1 - iy) / h];
+}
+/* 自动裁：留着原图，随时能「还原」或在原图上「调整」框 */
+let autoCropTok = 0;
+function applyAutoCrop(r, by) {
+  Swap.uncrop = Swap.work; Swap.autoBox = r;
+  Swap.work = cropCanvas(Swap.work, r); Swap.cropped = true; Swap.cache = {};
+  $('#autoCropMsg').textContent = (by === 'Claude' ? 'Claude 认出了画的范围，' : '') + '已经自动裁掉画以外的部分（桌面、手、笔、白纸边）。';
+  $('#autoCrop').hidden = false;
+  persistCrop();
+}
+/* 已经存进「想画」的图：裁好的结果（或者「还原」的选择）记下来，下次打开不再重复裁 */
+function persistCrop() {
+  const it = Swap.itemId && Store.items.get(Swap.itemId); if (!it) return;
+  it.thumb = jpeg(Swap.work, 300, 30000); it.hasRef = true; it.cropDone = true;
+  putImg(it.id + '_ref', jpeg(Swap.work, 1200, 230000)).catch(() => {});
+  saveItem(it);
+}
+/* 用 Claude 看图找画的范围（本地算法没把握的时候）。几秒钟，回来时如果用户已经换图了就不动 */
+async function aiCrop(tok) {
+  if (!sampleFn || aiOff || !imgCaps || !Swap.work) return;
+  try {
+    const blob = await toBlob(toCanvas(Swap.work, 900), .85);
+    const res = await sampleFn.json('图片是一张手绘画（丙烯马克笔 / 水彩之类）的照片或截图，可能拍到了画以外的东西：桌面、手、笔、旁边的另一幅画、画纸没涂色的白边、手机截图的界面。请找出「这一幅画本身画出来的部分」的范围。框要贴着画面的边，宁可往里收一点，也不要带到桌面、手、白边。如果整张图都是画、没有多余的东西，full 填 true。只返回 JSON：{"full":true 或 false,"box":[左,上,右,下]}，都是 0 到 1 的比例。', {images: [blob], modelTier: 'default'});
+    if (tok !== autoCropTok || Swap.uncrop) return;
+    const b = res && Array.isArray(res.box) ? res.box.map(Number) : null;
+    if (!b || res.full === true || b.length !== 4 || b.some(v => !(v >= 0 && v <= 1)) || b[2] - b[0] < .2 || b[3] - b[1] < .2) return;
+    if ((b[2] - b[0]) * (b[3] - b[1]) > .9) return;
+    const ix = (b[2] - b[0]) * .01, iy = (b[3] - b[1]) * .01;
+    applyAutoCrop([b[0] + ix, b[1] + iy, b[2] - ix, b[3] - iy], 'Claude');
+    Swap.ai = null; Swap.procMode = 'auto';
+    await runAnalyze();
+  } catch (e) {}
+}
+function cropCanvas(cv, r) {
+  const sx = Math.round(r[0] * cv.width), sy = Math.round(r[1] * cv.height), cw = Math.max(20, Math.round((r[2] - r[0]) * cv.width)), ch = Math.max(20, Math.round((r[3] - r[1]) * cv.height));
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch; c.getContext('2d').drawImage(cv, sx, sy, cw, ch, 0, 0, cw, ch); return c;
+}
 let cropping = false;
 const Crop = {r: [.06, .06, .94, .94]};
 function startCrop() {
@@ -2273,11 +2437,14 @@ $('#cropBox').addEventListener('pointermove', e => {
 });
 ['pointerup', 'pointercancel'].forEach(t => $('#cropBox').addEventListener(t, () => { cropDrag = null; }));
 $('#cropGo').addEventListener('click', () => cropping ? endCrop() : startCrop());
+$('#acUndo').addEventListener('click', () => { if (!Swap.uncrop) return; autoCropTok++; Swap.work = Swap.uncrop; Swap.uncrop = null; Swap.cropped = false; Swap.cache = {}; Swap.ai = null; Swap.procMode = 'auto'; $('#autoCrop').hidden = true; persistCrop(); runAnalyze(); toast('还原成原图了。'); });
+$('#acEdit').addEventListener('click', () => { if (!Swap.uncrop) return; const r = Swap.autoBox; autoCropTok++; Swap.work = Swap.uncrop; Swap.uncrop = null; Swap.cropped = false; Swap.cache = {}; $('#autoCrop').hidden = true; runAnalyze().then(() => { startCrop(); if (r) { Crop.r = r.slice(); placeCrop(); } }); });
 $('#cropNo').addEventListener('click', endCrop);
 $('#cropOk').addEventListener('click', () => {
   const w = Swap.work, r = Crop.r, sx = Math.round(r[0] * w.width), sy = Math.round(r[1] * w.height), cw = Math.max(20, Math.round((r[2] - r[0]) * w.width)), ch = Math.max(20, Math.round((r[3] - r[1]) * w.height));
   const c = document.createElement('canvas'); c.width = cw; c.height = ch; c.getContext('2d').drawImage(w, sx, sy, cw, ch, 0, 0, cw, ch);
   Swap.work = c; Swap.cropped = true; Swap.ai = null; Swap.procMode = 'auto'; Swap.cache = {};
+  $('#autoCrop').hidden = true; Swap.uncrop = null; persistCrop();
   endCrop(); setView('pens'); runAnalyze(); toast('裁好了，配色已经按裁剪后的重新算。');
 });
 
@@ -2562,7 +2729,7 @@ async function openInSwap(it) {
     const img = await loadImg(data);
     showTab('swap');
     Swap.split = .5; Swap.view = 'compare';
-    await setWork(img, {itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', style: it.style || '', ai: it.plan2 || null, title: it.title, n: it.abs != null ? it.n : 18, detail: it.abs != null ? it.abs : 1, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
+    await setWork(img, {autoCrop: !it.cropDone, itemId: it.id, kind: it.src === 'photo' ? 'photo' : 'art', style: it.style || '', ai: it.plan2 || null, title: it.title, n: it.abs != null ? it.n : 18, detail: it.abs != null ? it.abs : 1, ov: it.ov || [], extra: it.extra || [], share: it.link ? {title: it.title, author: it.author, url: it.link, tags: it.tags} : null});
     setView('compare');
     if (!it.plan2) runAi(true);
   } catch (e) { toast('图打不开了。'); }
@@ -2580,7 +2747,7 @@ $('#saveWant').addEventListener('click', () => {
   const it0 = Swap.itemId && Store.items.get(Swap.itemId);
   if (it0) {
     const x = fromSwap(it0.kind);
-    if (Swap.cropped) { x.thumb = jpeg(Swap.work, 300, 30000); x.hasRef = true; putImg(x.id + '_ref', jpeg(Swap.work, 1200, 230000)).catch(() => {}); Swap.cropped = false; }
+    if (Swap.cropped) { x.thumb = jpeg(Swap.work, 300, 30000); x.hasRef = true; x.cropDone = true; putImg(x.id + '_ref', jpeg(Swap.work, 1200, 230000)).catch(() => {}); Swap.cropped = false; }
     saveItem(x); toast('配色更新了。'); return;
   }
   const x = fromSwap('want');
@@ -2912,7 +3079,7 @@ async function bootSample() {
     const res = await fetch(o.f); if (!res.ok) throw new Error('fetch');
     const cv = await fileToCanvas(await res.blob(), 1400);
     if (!Swap.demo && Swap.work) return;
-    await setWork(cv, {demo: true, kind: 'art', title: o.title, n: 18, detail: 1, style: '', share: {title: o.title, author: o.author, url: o.url, tags: o.tags}});
+    await setWork(cv, {autoCrop: true, demo: true, kind: 'art', title: o.title, n: 18, detail: 1, style: '', share: {title: o.title, author: o.author, url: o.url, tags: o.tags}});
     $('#srcKind').textContent = '示例 · ' + o.author; Swap.split = .5; setView('compare');
   } catch (e) { $('#busy').hidden = true; }
 }

@@ -542,7 +542,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
             <button type="button" data-view="sketch" aria-pressed="false">画稿</button>
           </div>
           <span class="row" id="lineOnWrap" style="gap:8px 12px">
-            <span class="pills" role="group" aria-label="画风" id="pStyle"><button type="button" data-ps="wc" aria-pressed="true">水彩感</button><button type="button" data-ps="flat" aria-pressed="false">平涂</button></span>
+            <span class="pills" role="group" aria-label="画风" id="pStyle"><button type="button" data-ps="wc" aria-pressed="true">水彩感</button><button type="button" data-ps="mk" aria-pressed="false">马克笔厚涂</button><button type="button" data-ps="flat" aria-pressed="false">平涂</button></span>
             <label class="check"><input type="checkbox" id="lineOn"> 叠加勾线</label>
           </span>
           <span class="hint" id="viewHint">点图上任意一处，看最接近的是哪支笔</span>
@@ -572,8 +572,8 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
           <details class="adj" id="adj"><summary><span>调整</span><b id="adjSum">10 色 · 简化 1 · 原色</b></summary><div>
           <div class="ctl"><label for="nIn">颜色数</label><input type="range" id="nIn" min="4" max="28" value="18"><output id="nOut" for="nIn">18</output></div>
           <div class="ctl" id="detailCtl"><label for="detIn">抽象度</label><input type="range" id="detIn" min="0" max="4" value="1"><output id="detOut" for="detIn">1</output></div>
-          <div class="ctl"><label for="depIn">层次感</label><input type="range" id="depIn" min="0" max="100" step="5" value="80"><output id="depOut" for="depIn">80</output></div>
-          <div class="ctl"><label for="vivIn">鲜艳度</label><input type="range" id="vivIn" min="100" max="170" step="5" value="130"><output id="vivOut" for="vivIn">130</output></div>
+          <div class="ctl"><label for="depIn">层次感</label><input type="range" id="depIn" min="0" max="100" step="5" value="70"><output id="depOut" for="depIn">70</output></div>
+          <div class="ctl"><label for="vivIn">鲜艳度</label><input type="range" id="vivIn" min="90" max="170" step="5" value="110"><output id="vivOut" for="vivIn">110</output></div>
           <div class="style-row"><span class="label">风格</span>
             <div class="pills" role="group" aria-label="风格" id="styleP">
               <button type="button" data-style="" aria-pressed="true">原色</button>
@@ -1185,7 +1185,7 @@ function analyze(cv, k, detail) {
   const lo = pct(.01), hi = Math.max(lo + 20, pct(.99)), top = pct(.95);
   let sa = 0, sb = 0, sn = 0;
   for (let i = 0; i < N; i++) { const l = L[i * 3], a = L[i * 3 + 1], b = L[i * 3 + 2]; if (l >= top && a * a + b * b < 484) { sa += a; sb += b; sn++; } }
-  const a0 = sn ? Math.max(-12, Math.min(12, sa / sn)) : 0, b0 = sn ? Math.max(-12, Math.min(12, sb / sn)) : 0, vv = Swap.vivid || 1.3;
+  const a0 = sn ? Math.max(-12, Math.min(12, sa / sn)) : 0, b0 = sn ? Math.max(-12, Math.min(12, sb / sn)) : 0, vv = Swap.vivid || 1.1;
   // 黑、白、灰保持中性：只给真正有颜色、又不太暗的地方提鲜（不然黑头发会变藏青、灰桌面会变蓝）
   const sst = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
   for (let i = 0; i < N; i++) {
@@ -1266,7 +1266,7 @@ function mergeSmall(lab, W, H, minArea) {
 
 /* ================= 换色状态 ================= */
 const Swap = {
-  work: null, kind: 'art', demo: true, n: 18, detail: 1, vivid: 1.3, paintStyle: 'wc', lineOn: false, split: .5, skFill: .35, skLab: 'num', ai: null, procMode: 'auto', cropped: false, onlyHave: true, view: 'pens',
+  work: null, kind: 'art', demo: true, n: 18, detail: 1, vivid: 1.1, paintStyle: 'wc', lineOn: false, split: .5, skFill: .35, skLab: 'num', ai: null, procMode: 'auto', cropped: false, onlyHave: true, view: 'pens',
   res: null, map: [], ov: [], extra: [], itemId: null, share: null, pick: null, cache: {}, style: '', styleSet: null, mood: 'sunny', step: 0,
   rematch() { if (this.res) { this.match(); render(); renderSwapList(); } }
 };
@@ -1303,7 +1303,7 @@ function setKind(k, silent) {
     if (Swap.work && !Swap.demo) runAnalyze();
   }
 }
-function adjSum() { const el = $('#adjSum'); if (el) el.textContent = Swap.n + ' 色 · 抽象 ' + Swap.detail + ' · 鲜艳 ' + Math.round((Swap.vivid || 1.3) * 100) + ' · ' + (Swap.style ? MOODS[Swap.style].name : '原色'); }
+function adjSum() { const el = $('#adjSum'); if (el) el.textContent = Swap.n + ' 色 · 抽象 ' + Swap.detail + ' · 鲜艳 ' + Math.round((Swap.vivid || 1.1) * 100) + ' · ' + (Swap.style ? MOODS[Swap.style].name : '原色'); }
 function setStyle(st, silent) {
   Swap.style = st || '';
   Swap.styleSet = st && MOODS[st] ? moodPens(st).nos : null;
@@ -1394,10 +1394,16 @@ function paperTex(W, H) {
    2 笔触：笔头宽度的平行笔道，相邻笔道重叠的地方更深一点
    3 颜料浓淡不均、边缘颜料堆积
    4 纸的凹凸：凸起处受光、凹处颜料挂不上露出一点纸白 */
+/* 两种画风：水彩感（透明、浅、软边、多露纸）和马克笔厚涂（不透明、笔道明显） */
+const STYLES = {
+  wc: {alpha: .74, alphaVar: .16, overlap: .02, edge: .06, gran: .75, gap: .1, down: .55, ink: .72, soft: true},
+  mk: {alpha: 1, alphaVar: 0, overlap: .06, edge: .1, gran: .55, gap: .05, down: 1, ink: .92, soft: false}
+};
 function paintBuf() {
   if (Swap.cache.pb) return Swap.cache.pb;
+  const ST = STYLES[Swap.paintStyle] || STYLES.wc;
   const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = absLabels(), labP = Swap.cache.dab || lab, {comp, list} = regionInfo(), Lc = r.Lc;
-  const K = Swap.map.length, sumL = new Float64Array(K), cnt = new Float64Array(K), depth = Swap.depth == null ? .8 : Swap.depth;
+  const K = Swap.map.length, sumL = new Float64Array(K), cnt = new Float64Array(K), depth = Swap.depth == null ? .7 : Swap.depth;
   for (let i = 0; i < N; i++) { sumL[labP[i]] += Lc[i]; cnt[labP[i]]++; }
   const lut = Swap.map.map((m) => { const p = m.no ? penByNo(m.no) : null, pl = p ? hexLab(p.hex) : m.c.lab, t = []; for (let k = -30; k <= 30; k++) t.push(lab2rgb(Math.max(0, Math.min(100, pl[0] + k)), pl[1], pl[2])); return t; });
   const meanL = Array.from(sumL, (v, k) => cnt[k] ? v / cnt[k] : 50);
@@ -1409,26 +1415,37 @@ function paintBuf() {
   const cs = ang.map(Math.cos), sn = ang.map(Math.sin), sc = Math.max(1, W / 860), tip = 9 * sc, out = new Uint8ClampedArray(N * 4);
   const PT = paperTex(W, H), ph = PT.h, ps = PT.s;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = y * W + x, ci = comp[i], vp = labP[i], dL = Math.max(-30, Math.min(30, Math.round((Lc[i] - meanL[vp]) * depth))), c = lut[vp][dL + 30];
+    const i = y * W + x, ci = comp[i], vp = labP[i], dRaw = (Lc[i] - meanL[vp]) * depth, dL = Math.max(-30, Math.min(30, Math.round(dRaw < 0 ? dRaw * ST.down : dRaw))), c = lut[vp][dL + 30];
     const u = x * cs[ci] + y * sn[ci], v = -x * sn[ci] + y * cs[ci];
     // 笔道：每条宽一个笔头，边缘轻微抖动；两条笔道交叠处（t 接近 0）多一层颜料
     const band = v / tip + n1(u / (38 * sc) + ci * 5.3) * .25, t = band - Math.floor(band), overlap = t < .14 ? (1 - t / .14) : 0;
     const dens = n2(x / (46 * sc) + ci * .7, y / (46 * sc) + 2.3);
-    let f = 1 - .06 * overlap + .03 * dens;
-    const dd = D[i]; if (dd < 4) f *= 1 - .1 * (1 - dd / 4);
+    let f = 1 - ST.overlap * overlap + .03 * dens;
+    const dd = D[i]; if (dd < 4) f *= 1 - ST.edge * (1 - dd / 4);
     f *= 1 + .07 * ps[i];
     let R = c[0] * f, G = c[1] * f, B = c[2] * f;
+    // 水彩是透明的：颜色和纸叠在一起，浓淡不匀；深色笔盖得住一些
+    const lum = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255;
+    if (ST.alpha < 1) {
+      const al = lum < .25 ? Math.max(.9, Math.min(1, .95 + ST.alphaVar * .25 * dens)) : Math.max(.5, Math.min(1, ST.alpha + ST.alphaVar * dens + (lum < .4 ? .1 : 0)));
+      R = 250 + (R - 250) * al; G = 249 + (G - 249) * al; B = 244 + (B - 244) * al;
+    }
     // 纸纹凹处颜料挂不满，透一点纸白；交界处留一条很细的纸缝
-    let paper = ph[i] < -.3 ? (-ph[i] - .3) * .55 : 0;
-    if (dd === 0) paper = Math.max(paper, .05 + Math.max(0, -ph[i]) * .22);
+    let paper = ph[i] < -.3 ? (-ph[i] - .3) * ST.gran * Math.max(.12, Math.min(1, lum / .45)) : 0;
+    if (dd === 0) paper = Math.max(paper, ST.gap + Math.max(0, -ph[i]) * .22);
     if (paper > 0) { R += (250 - R) * paper; G += (249 - G) * paper; B += (244 - B) * paper; }
     // 原画里细的深色笔画（气球线、小船、气泡边）抽象时会被抹掉，用细头深色笔补回来
     const th = r.thin ? r.thin[i] : 0;
-    if (th > .06) { const a = Math.min(1, th * 1.7) * .92; R += (30 - R) * a; G += (28 - G) * a; B += (34 - B) * a; }
+    if (th > .06) { const a = Math.min(1, th * 1.7) * ST.ink; R += (30 - R) * a; G += (28 - G) * a; B += (34 - B) * a; }
     // 小的高光（气泡、水面闪光、亮边）最后用白笔点回来
     const gl = r.glint ? r.glint[i] : 0;
     if (gl > .08) { const a = Math.min(1, gl * 1.6) * .9; R += (252 - R) * a; G += (251 - G) * a; B += (247 - B) * a; }
     out[i * 4] = R; out[i * 4 + 1] = G; out[i * 4 + 2] = B; out[i * 4 + 3] = 255;
+  }
+  // 水彩的边是软的：交界处颜色互相晕开一点，块面里也略微柔一点
+  if (ST.soft) {
+    const bl = boxBlur(boxBlur(out, W, H, 1), W, H, 1);
+    for (let i = 0; i < N; i++) { const k = D[i] < 3 ? .6 : .22; for (let ch = 0; ch < 3; ch++) out[i * 4 + ch] += (bl[i * 4 + ch] - out[i * 4 + ch]) * k; }
   }
   return (Swap.cache.pb = out);
 }
@@ -1511,7 +1528,7 @@ function render(cv, view, step) {
   const W = r.W, H = r.H, N = W * H;
   cv.width = W; cv.height = H;
   const x = cv.getContext('2d'), im = x.createImageData(W, H), d = im.data, lab = absLabels(), LN = r.lines;
-  const pb = Swap.paintStyle === 'wc' && view !== 'lines' ? paintBuf() : null;
+  const pb = Swap.paintStyle !== 'flat' && view !== 'lines' ? paintBuf() : null;
   const col = Swap.map.map((m, i) => { const p = penForLabel(i); return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
   const INK = [36, 38, 50], PAPER = [251, 250, 246], lk = Swap.lineOn ? .9 / 255 : 0;
   const put = (i, c, a) => { d[i * 4] = c[0] + (INK[0] - c[0]) * a; d[i * 4 + 1] = c[1] + (INK[1] - c[1]) * a; d[i * 4 + 2] = c[2] + (INK[2] - c[2]) * a; d[i * 4 + 3] = 255; };
@@ -1760,7 +1777,7 @@ function renderSteps() {
   if (aiBusy) {} else if (Swap.ai && Swap.procMode === 'ai') { tips.hidden = false; tips.innerHTML = analHTML(Swap.ai); } else tips.hidden = true;
   const olist = $('#procSteps');
   olist.innerHTML = steps.map((st, k) => '<li><button type="button" class="pstep" data-step="' + k + '" aria-pressed="' + (Swap.view === 'step' && Swap.step === k) + '"><canvas width="10" height="10"></canvas><span class="n">第 ' + (k + 1) + ' 步</span><b>' + esc(st.t) + '</b>' + (st.tool || st.wait ? '<span class="sbadges">' + (st.tool ? '<i>' + esc(st.tool) + '</i>' : '') + (st.wait ? '<i class="w">画完等干</i>' : '') + '</span>' : '') + '<span class="penstrip">' + st.nos.map(n => penHTML(penByNo(n), 'mini')).join('') + '</span><p class="do">' + esc(st.d) + '</p>' + (st.tip ? '<p class="tipl">小提示：' + esc(st.tip) + '</p>' : '') + '</button></li>').join('');
-  const W = r.W, H = r.H, sc = Math.max(1, Math.floor(W / 240)), lab = absLabels(), LN = r.lines, pb = Swap.paintStyle === 'wc' ? paintBuf() : null;
+  const W = r.W, H = r.H, sc = Math.max(1, Math.floor(W / 240)), lab = absLabels(), LN = r.lines, pb = Swap.paintStyle !== 'flat' ? paintBuf() : null;
   const col = Swap.map.map(m => { const p = m.no ? penByNo(m.no) : null; return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
   const lk = Swap.lineOn ? .9 / 255 : 0, ol = outlineData().lab;
   steps.forEach((st, k) => {
@@ -1861,7 +1878,7 @@ $('#nIn').addEventListener('input', e => { $('#nOut').value = e.target.value; Sw
 $('#detIn').addEventListener('input', e => { $('#detOut').value = e.target.value; Swap.detail = +e.target.value; clearTimeout(slideT); slideT = setTimeout(() => { Swap.cache = {}; render(); renderSwapList(); adjSum(); }, 200); });
 $('#depIn').addEventListener('input', e => { $('#depOut').value = e.target.value; Swap.depth = +e.target.value / 100; clearTimeout(slideT); slideT = setTimeout(() => { Swap.cache.pb = null; render(); renderSteps(); }, 150); });
 $('#vivIn').addEventListener('input', e => { $('#vivOut').value = e.target.value; Swap.vivid = +e.target.value / 100; clearTimeout(slideT); slideT = setTimeout(runAnalyze, 250); });
-$$('#pStyle [data-ps]').forEach(b => b.addEventListener('click', () => { Swap.paintStyle = b.dataset.ps; $$('#pStyle [data-ps]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); renderSteps(); }));
+$$('#pStyle [data-ps]').forEach(b => b.addEventListener('click', () => { Swap.paintStyle = b.dataset.ps; Swap.cache.pb = null; $$('#pStyle [data-ps]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); render(); renderSteps(); }));
 $('#onlyHave').addEventListener('change', e => { Swap.onlyHave = e.target.checked; Swap.cache = {marks: Swap.cache.marks}; Swap.rematch(); });
 
 /* 选图 / 拖拽 / 粘贴 */

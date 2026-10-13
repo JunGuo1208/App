@@ -167,6 +167,8 @@ h1,h2,h3,h4{text-wrap:balance}
 .src-want-list .nx::after{content:"马上画";position:absolute;top:6px;left:6px;padding:1px 6px;border-radius:4px;background:#E8553E;color:#fff;font-size:11px;font-weight:700}
 .src-or{display:flex;align-items:center;gap:10px;margin:6px 0 0;color:var(--ink-2);font-size:13px}
 .src-or::before,.src-or::after{content:"";flex:1;border-top:1px dashed var(--rule)}
+.pmore{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:8px 0 2px}
+.pmore .penstrip{display:flex;flex-wrap:wrap;gap:6px}
 .autocrop{padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--paper) 88%,#E8553E);border:1px dashed color-mix(in srgb,var(--rule) 40%,#E8553E)}
 .autocrop .hint{flex:1 1 100%}
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -294,7 +296,7 @@ input[type=color]{width:44px;height:40px;border:0;padding:0;background:none;curs
 .toppens{display:flex;flex-direction:column;gap:6px;background:var(--paper);border-radius:8px;padding:10px 14px;box-shadow:var(--lift);min-width:0}
 .toppens span{font-size:12px;color:var(--ink-3)}
 .toppens .penstrip .pen{position:relative}
-.toppens .penstrip i{position:absolute;right:-6px;top:-7px;font-style:normal;font-size:10px;font-family:var(--f-type);font-weight:700;background:var(--shu);color:#fff;border-radius:3px;padding:0 4px;line-height:15px;box-shadow:0 0 0 1.5px var(--cut)}
+.toppens .penstrip i.cnt{position:absolute;right:-6px;top:-7px;font-style:normal;font-size:10px;font-family:var(--f-type);font-weight:700;background:var(--shu);color:#fff;border-radius:3px;padding:0 4px;line-height:15px;box-shadow:0 0 0 1.5px var(--cut)}
 
 /* 首页收集卡 */
 .collect{display:flex;flex-direction:column;gap:14px}
@@ -466,6 +468,12 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
 /* ---------- 响应式 ---------- */
 @media (max-width:1020px){
   .swap{grid-template-columns:1fr}
+  /* 手机：图下面先看「上色过程」，笔的清单放后面 */
+  #p-swap:not([hidden]){display:flex;flex-direction:column;gap:20px}
+  #p-swap .swap{display:contents}
+  #p-swap .stage{order:1}
+  #p-swap .proc{order:2;margin-top:0}
+  #p-swap .side{order:3}
   .brand p{display:none}
 }
 @media (max-width:760px){
@@ -1989,7 +1997,7 @@ function renderItemBar() {
   if (!it) {
     const sh = Swap.share;
     bar.hidden = !(sh && (sh.author || sh.url));
-    if (!bar.hidden) bar.innerHTML = (sh.author ? '<span class="by">' + esc(sh.author) + '</span>' : '') + (sh.url ? '<a class="link" href="' + esc(sh.url) + '" target="_blank" rel="noopener">看原帖 ↗</a>' : '') + (Swap.demo ? '<span class="tag">示例</span>' : '');
+    if (!bar.hidden) bar.innerHTML = (sh.author ? '<span class="by">' + esc(sh.author) + '</span>' : '') + (sh.url ? '<a class="link" href="' + esc(sh.url) + '" target="_blank" rel="noopener">看原帖 ↗</a>' : '') + '';
     return;
   }
   bar.hidden = false;
@@ -2022,7 +2030,9 @@ function renderSwapList() {
   const gs = groups(), ul = $('#plist');
   $('#penCount').innerHTML = flap(gs.length);
   if (!Store.pens.length) { ul.innerHTML = '<li class="hint">色卡里还没有笔，先去「我的笔」加。</li>'; return; }
-  ul.innerHTML = gs.map(g => {
+  // 手机上一长串太长：默认只列用得最多的 6 支，剩下的点一下展开
+  const SHOW = 6, folded = !Swap.plistOpen && gs.length > SHOW + 2, rest = folded ? gs.slice(SHOW) : [];
+  ul.innerHTML = (folded ? gs.slice(0, SHOW) : gs).map(g => {
     const p = penByNo(g.no);
     if (g.extra) {
       return '<li class="prow" data-no="' + esc(g.no) + '"><i class="sw src" style="--c:' + esc(g.src) + '"></i><span class="ar">→</span>' + penHTML(p) +
@@ -2035,7 +2045,7 @@ function renderSwapList() {
     return '<li class="prow" data-no="' + esc(g.no) + '"><i class="sw src" style="--c:' + m.c.hex + '" title="原图里的颜色 ' + m.c.hex + '"></i><span class="ar">→</span>' + penHTML(p) +
       '<div class="pinfo"><b>' + esc(p ? p.name || p.no : g.no) + '</b><div><span class="st ' + q[0] + '">' + q[1] + '</span><span>占 ' + Math.max(1, Math.round(g.share * 100)) + '%</span>' + (p && p.st === 'low' ? '<span class="st warn">快没水</span>' : '') + mix + '</div></div>' +
       '<button class="more" type="button" data-more="' + esc(g.no) + '" aria-expanded="' + (openAlt === g.no) + '">换</button>' + alt + '</li>';
-  }).join('');
+  }).join('') + (folded ? '<li class="pmore"><button class="btn small quiet" type="button" id="plistAll">还有 ' + rest.length + ' 支小面积的笔（共占 ' + Math.max(1, Math.round(rest.reduce((a, g) => a + (g.share || 0), 0) * 100)) + '%）· 展开</button><span class="penstrip">' + rest.map(g => penHTML(penByNo(g.no), 'mini')).join('') + '</span></li>' : (gs.length > SHOW + 2 ? '<li class="pmore"><button class="btn small quiet" type="button" id="plistAll">收起</button></li>' : ''));
 }
 function regionInfo() {
   if (Swap.cache.regions) return Swap.cache.regions;
@@ -2066,8 +2076,8 @@ function whereOf(c, W, H) {
   return s;
 }
 const CATS = [
-  {s: '铺大色', tool: '粗头', tip: '往一个方向一笔接一笔涂，边上先留一点，最后再收边。'},
-  {s: '铺大色', tool: '粗头', tip: '先铺颜色，不用管细节。'},
+  {s: '铺大色', tool: '粗头', tip: '先浅后深：浅色先铺，往一个方向一笔接一笔涂，边上先留一点，最后再收边。'},
+  {s: '铺大色', tool: '粗头', tip: '先浅后深：浅色涂错了还能用深色盖，反过来就盖不住。'},
   {s: '涂中块', tool: '中头', tip: '边上稍微压住前一层，接缝就不会露白。'},
   {s: '补小块', tool: '细头', tip: '小块一点点补，宁可少涂不要涂出界。'},
   {s: '压暗部', tool: '细头', tip: '暗部一压，画面马上就立体了。'},
@@ -2097,7 +2107,8 @@ function autoSteps() {
   per.forEach((e, key) => { if (e.to !== key) return; const small = e.area < N * .008 && (e.ph === 1 || e.ph === 2); const sk = e.ph === 3 ? '3|all' : small ? e.ph + '|rest' : key; const m = subs.get(sk) || {k: e.k, ph: e.ph, rest: small || e.ph === 3, nos: [], area: 0}; m.area += e.area; m.k = Math.min(m.k, e.k); if (!m.nos.includes(e.no)) m.nos.push(e.no); subs.set(sk, m); e.sub = sk; });
   per.forEach(e => { if (!e.sub) e.sub = per.get(e.to).sub; });
   const Lof = no => hexLab(penByNo(no).hex)[0];
-  const arr = Array.from(subs.entries()).sort((a, b) => a[1].ph - b[1].ph || (a[1].rest - b[1].rest) || (a[1].ph <= 2 ? b[1].area - a[1].area : Lof(b[1].nos[0]) - Lof(a[1].nos[0])));
+  // 先浅后深：浅色涂错了还能用深色盖，深色先上就盖不住了；同样深浅时先铺面积大的
+  const arr = Array.from(subs.entries()).sort((a, b) => a[1].ph - b[1].ph || (a[1].rest - b[1].rest) || (a[1].ph <= 1 ? (Math.round(Lof(b[1].nos[0]) / 8) - Math.round(Lof(a[1].nos[0]) / 8)) || b[1].area - a[1].area : a[1].ph === 2 ? b[1].area - a[1].area : Lof(b[1].nos[0]) - Lof(a[1].nos[0])));
   const idx = new Map(); arr.forEach(([key], j) => idx.set(key, j));
   const last = Math.max(0, arr.length - 1), stepOf = new Uint8Array(N), compStep = new Int16Array(list.length);
   list.forEach((c, i) => { const k = cls[i]; compStep[i] = k < 0 ? last : idx.get(per.get(PH[k] + '|' + c.no).sub); });
@@ -2111,6 +2122,8 @@ function autoSteps() {
     }
     const no = m.nos[0], p = penByNo(no), wh = [];
     cs.forEach(c => { const w = whereOf(c, W, H); if (wh.length < 4 && !wh.includes(w)) wh.push(w); });
+    // 纸本来就是白的：最白的那块不用涂，四周涂的时候绕开它（水彩的「留白」）
+    { const pl = hexLab(p.hex); if (m.ph === 0 && pl[0] >= 91 && Math.hypot(pl[1], pl[2]) < 6) return {t: '留白 · ' + (p.name || no), tool: '不用涂', d: '框里的' + wh.slice(0, 3).join('、') + '是画面最白的地方：纸本来就是白的，先别涂，后面涂四周的时候绕开它。', tip: '画完觉得不够白、或者纸不是纯白，最后再用' + (p.name || no) + '补一下。', nos: [no], wait: false}; }
     const cat = m.ph === 0 ? m.k : m.ph === 1 ? 2 : 4, label = CATS[cat].s;
     const tool = m.ph === 0 ? '粗头' : m.ph === 1 ? (m.area > N * .03 ? '中头' : '细头') : '细头';
     return {t: label + ' · ' + (p.name || no), tool, d: '用' + tool + '把框里的' + wh.slice(0, 3).join('、') + '涂满。', tip: CATS[cat].tip, nos: [no], wait: m.ph === 0};
@@ -2192,6 +2205,7 @@ $('#procSteps').addEventListener('click', e => {
   $('#cvWrap').scrollIntoView({block: 'nearest', behavior: 'smooth'});
 });
 function flap(n) { return String(n).split('').map(c => '<b>' + c + '</b>').join(''); }
+$('#plist').addEventListener('click', e => { if (e.target.closest('#plistAll')) { Swap.plistOpen = !Swap.plistOpen; renderSwapList(); } });
 $('#plist').addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.more) { openAlt = openAlt === t.dataset.more ? null : t.dataset.more; renderSwapList(); return; }
@@ -2702,7 +2716,7 @@ function renderDone() {
   const top = Array.from(use.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
   $('#doneStats').innerHTML = '<div class="ctr"><span class="flap">' + flap(all.length) + '</span><span>一共画过</span></div><div class="ctr"><span class="flap">' + flap(month) + '</span><span>这个月</span></div>' +
     (mins ? '<div class="ctr"><span class="flap">' + flap(Math.round(mins / 6) / 10) + '</span><span>小时</span></div>' : '') +
-    (top.length ? '<div class="toppens"><span>最常用的笔</span><div class="penstrip">' + top.map(t => { const p = penByNo(t[0]); return p ? penHTML(p, 'mini', '<i>' + t[1] + '</i>') : ''; }).join('') + '</div></div>' : '');
+    (top.length ? '<div class="toppens"><span>最常用的笔</span><div class="penstrip">' + top.map(t => { const p = penByNo(t[0]); return p ? penHTML(p, 'mini', '<i class="cnt">' + t[1] + '</i>') : ''; }).join('') + '</div></div>' : '');
   let list = all.filter(i => itemMatches(i, doneF.q)).sort((a, b) => String(b.done && b.done.date || '').localeCompare(String(a.done && a.done.date || '')) || b.updated - a.updated);
   const g = $('#doneGrid');
   if (!all.length) { g.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><h3>还没有画过的记录</h3><p>每画完一张，拍一下放进来。会记下日期、用了哪些笔、画了多久，慢慢就能看出自己最常用哪几支、哪支要补货。</p><button class="btn primary" type="button" id="emptyAddDone">记第一张</button></div>'; return; }
@@ -3208,7 +3222,7 @@ async function bootSample() {
     const cv = await fileToCanvas(await res.blob(), 1400);
     if (Swap.ownOpening || (!Swap.demo && Swap.work)) return;
     await setWork(cv, {autoCrop: true, demo: true, kind: 'art', title: o.title, n: 18, detail: 1, style: '', share: {title: o.title, author: o.author, url: o.url, tags: o.tags}});
-    $('#srcKind').textContent = '示例 · ' + o.author; Swap.split = .5; setView('compare');
+    $('#srcKind').textContent = '示例'; Swap.split = .5; setView('compare');
   } catch (e) { $('#busy').hidden = true; }
 }
 

@@ -167,6 +167,10 @@ h1,h2,h3,h4{text-wrap:balance}
 .src-want-list .nx::after{content:"马上画";position:absolute;top:6px;left:6px;padding:1px 6px;border-radius:4px;background:#E8553E;color:#fff;font-size:11px;font-weight:700}
 .src-or{display:flex;align-items:center;gap:10px;margin:6px 0 0;color:var(--ink-2);font-size:13px}
 .src-or::before,.src-or::after{content:"";flex:1;border-top:1px dashed var(--rule)}
+.dilnote{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--ink-2)}
+.dilnote .sw{width:14px;height:14px;border-radius:3px;background:var(--c);box-shadow:0 0 0 1px rgba(0,0,0,.12);display:inline-block}
+.dilnote .sw:last-of-type{margin-right:4px}
+.pen.tint .sw{background:var(--c)}
 .pmore{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:8px 0 2px}
 .pmore .penstrip{display:flex;flex-wrap:wrap;gap:6px}
 .autocrop{padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--paper) 88%,#E8553E);border:1px dashed color-mix(in srgb,var(--rule) 40%,#E8553E)}
@@ -618,6 +622,7 @@ dialog::backdrop{background:rgba(20,16,36,.45)}
             <p class="hint" id="styleHint">原色：在全部笔里找最接近的。选一个风格，就只用那一组笔，照片会变成平涂插画的感觉。</p>
           </div>
           <label class="check"><input type="checkbox" id="onlyHave" checked> 只用手上有的笔（不算「没了」的）</label>
+          <label class="check"><input type="checkbox" id="diluteOn" checked> 浅色用已有的笔兑水调（少用几支笔）</label>
           </div></details>
           <ul class="plist" id="plist"></ul>
           <div class="side-acts">
@@ -1441,15 +1446,56 @@ Swap.match = function () {
     let no = rank[0] ? rank[0].p.no : null;
     const o = this.ov.find(v => dE(hexLab(v.s), c.lab) < 8);
     if (o) no = o.no;
-    return {c, rank, no};
+    return {c, rank, no, dil: 1, ovr: !!o};
   });
+  if (this.dilute !== false) applyDilution(this.map);
   this.cache = {};
 };
+/* 加水稀释：丙烯马克笔是水性的，挤一点在调色盘上兑水，同一支笔就能涂出浅一档、浅两档的颜色。
+   所以浅色不一定要另买一支：从面积大的颜色开始，如果「已经要用的某支笔 + 水」足够接近，就用它，少用一支笔 */
+const DILS = [{a: .6, t: '加一点水'}, {a: .35, t: '加很多水'}];
+const PAPER_RGB = [250, 249, 244];
+const lin = v => { v /= 255; return v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }, unlin = v => 255 * (v <= .0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - .055);
+const tintCache = new Map();
+function tintHex(hex, a) {
+  if (a >= 1) return hex; const k = hex + a; let v = tintCache.get(k); if (v) return v;
+  const c = hex2rgb(hex), t = c.map((x, i) => Math.round(Math.max(0, Math.min(255, unlin(lin(PAPER_RGB[i]) + (lin(x) - lin(PAPER_RGB[i])) * a)))));
+  v = rgb2hex(t[0], t[1], t[2]); tintCache.set(k, v); return v;
+}
+function dilText(a) { const d = DILS.find(x => x.a === a); return d ? d.t : ''; }
+/* 这一块实际涂出来的颜色（笔的颜色，或者兑了水的笔色） */
+function effHex(m) { if (!m || !m.no) return m ? m.c.hex : '#cccccc'; const p = penByNo(m.no); return p ? tintHex(p.hex, m.dil || 1) : m.c.hex; }
+function effLab(m) { return hexLab(effHex(m)); }
+function applyDilution(map) {
+  const order = map.map((m, i) => i).sort((a, b) => map[b].c.share - map[a].c.share), used = new Map();
+  map.forEach(m => { if (m.no) used.set(m.no, (used.get(m.no) || 0) + 1); });
+  const base = new Set();
+  for (const i of order) {
+    const m = map[i]; if (!m.no) continue;
+    const own = dE(m.c.lab, hexLab(penByNo(m.no).hex));
+    // 这支笔别的地方也要用、或者是用户手动指定的：不动
+    if (!m.ovr && used.get(m.no) === 1 && m.c.lab[0] > 55) {
+      let best = null;
+      for (const no of base) { const ph = penByNo(no).hex; for (const d of DILS) { const e = dE(m.c.lab, hexLab(tintHex(ph, d.a))); if (!best || e < best.e) best = {no, a: d.a, e}; } }
+      // 兑水的颜色和原色差不多接近（最多差一点），而且本身就够像：换成兑水，少一支笔
+      if (best && best.e < 10 && best.e <= own + 3) { used.set(m.no, 0); m.no = best.no; m.dil = best.a; continue; }
+    }
+    base.add(m.no);
+  }
+  // 两支几乎一样的笔（比如两支很近的蓝），面积小的那支并进大的那支，再少一支
+  const share = new Map(); map.forEach(m => { if (m.no) share.set(m.no, (share.get(m.no) || 0) + m.c.share); });
+  map.forEach(m => {
+    if (!m.no || m.ovr || (m.dil || 1) < 1 || share.get(m.no) > .04) return;
+    const pl = hexLab(penByNo(m.no).hex); let best = null;
+    share.forEach((sh, no) => { if (no === m.no || sh <= share.get(m.no)) return; const e = dE(pl, hexLab(penByNo(no).hex)); if (e < 7 && (!best || e < best.e)) best = {no, e}; });
+    if (best && dE(m.c.lab, hexLab(penByNo(best.no).hex)) < 12) { share.set(best.no, share.get(best.no) + share.get(m.no)); share.set(m.no, 0); m.no = best.no; }
+  });
+}
 /* 抽象：每支笔的区域各自模糊一下再取最大，边界变成顺滑的大形，碎点没了 */
 function absLabels() {
   if (Swap.cache.abs) return Swap.cache.abs;
   const r = Swap.res, W = r.W, H = r.H, N = W * H, lab = r.labels, keyOf = [], reps = [], kid = new Map();
-  Swap.map.forEach((m, i) => { const k = m.no || ('#' + i); if (!kid.has(k)) { kid.set(k, reps.length); reps.push(i); } keyOf[i] = kid.get(k); });
+  Swap.map.forEach((m, i) => { const k = m.no ? m.no + '~' + (m.dil || 1) : ('#' + i); if (!kid.has(k)) { kid.set(k, reps.length); reps.push(i); } keyOf[i] = kid.get(k); });
   const K = reps.length, lvl = Math.max(0, Math.min(4, Swap.detail | 0));
   let out = new Uint8Array(N); const dab = new Uint8Array(N), mixK = new Uint8Array(N), mixA = new Float32Array(N);
   if (lvl === 0) { for (let i = 0; i < N; i++) dab[i] = out[i] = reps[keyOf[lab[i]]]; }
@@ -1491,7 +1537,7 @@ function absLabels() {
   // 深浅交给后面的「分层罩染」去做，这样明暗是有结构的，不是随机斑块
   const big = new Uint8Array(N), K2 = Swap.map.length;
   if (lvl > 0) {
-    const pl = Swap.map.map(m => m.no ? hexLab(penByNo(m.no).hex) : m.c.lab), par = Array.from({length: K2}, (_, i) => i);
+    const pl = Swap.map.map(m => m.no ? effLab(m) : m.c.lab), par = Array.from({length: K2}, (_, i) => i);
     const fd = i => { while (par[i] !== i) i = par[i] = par[par[i]]; return i; };
     // 照片这种纹理多的图：同一个物体里相近的几种颜色（肉的五六种棕）也并成一支笔，深浅交给后面的「分层」
     const busyK = (r.kr || 0) >= 3, nT = busyK ? 17 : 15, cT = busyK ? 11 : 7;
@@ -1524,7 +1570,7 @@ function absLabels() {
   }
   // 小而显眼的颜色（蓝眼珠、嘴唇、耳钉、小红花）：抽象时容易被旁边的大色块吃掉，这里放回来
   if (lvl > 0) {
-    const pl = Swap.map.map(m => m.no ? hexLab(penByNo(m.no).hex) : m.c.lab), cm = new Uint8Array(N), org = new Uint8Array(N);
+    const pl = Swap.map.map(m => m.no ? effLab(m) : m.c.lab), cm = new Uint8Array(N), org = new Uint8Array(N);
     for (let i = 0; i < N; i++) { const o = reps[keyOf[lab[i]]]; org[i] = o; if (o !== out[i] && dE(pl[o], pl[out[i]]) > 22 && Math.hypot(pl[o][1], pl[o][2]) > 16) cm[i] = 1; }
     const ii = new Int32Array((W + 1) * (H + 1));
     for (let y = 0; y < H; y++) { let rs = 0; for (let x = 0; x < W; x++) { rs += cm[y * W + x]; ii[(y + 1) * (W + 1) + x + 1] = ii[y * (W + 1) + x + 1] + rs; } }
@@ -1645,7 +1691,7 @@ function lightField() {
     for (let j = 0; j < n2_; j++) if (!sub[j]) { cy[lb[j]] += (j / w2 | 0) / h2; cn[lb[j]]++; if (j < w2) top[lb[j]] = 1; }
     const sky = Array.from(cy, (v, k) => cn[k] && top[k] && v / cn[k] < .42);
     // 影子只投在「一整块衬底」上（金鱼的蓝底、番茄的水）：风景画里底色有好几块（天、山、水），不投
-    const Lk = Swap.map.map(m => m.no ? hexLab(penByNo(m.no).hex)[0] : m.c.lab[0]);
+    const Lk = Swap.map.map(m => m.no ? effLab(m)[0] : m.c.lab[0]);
     const grounds = []; cn.forEach((c, k) => { if (c > n2_ * .03 && Lk[k] < 88) grounds.push(k); });
     const one = grounds.length === 1 && !sky[grounds[0]] ? grounds[0] : -1;
     for (let j = 0; j < n2_; j++) if (!sub[j] && lb[j] === one) cast[j] = Math.min(1, Math.max(sst(.42, .58, a[j]) * .9, sst(.1, .6, a2[j]) * .55) + ao[j] * .35);
@@ -1729,11 +1775,11 @@ function paintBuf() {
   const K = Swap.map.length, sumL = new Float64Array(K), cnt = new Float64Array(K), depth = Swap.depth == null ? .7 : Swap.depth;
   for (let i = 0; i < N; i++) { sumL[labP[i]] += Lc[i]; cnt[labP[i]]++; }
   // 白和很浅的颜色压暗时不要变灰变黄：水彩里白的阴影是一层淡淡的蓝紫
-  const lut = Swap.map.map((m) => { const p = m.no ? penByNo(m.no) : null, pl = p ? hexLab(p.hex) : m.c.lab, t = [], cool = pl[0] > 78 && Math.hypot(pl[1], pl[2]) < 16 && pl[2] + pl[1] * .5 < 6 ? Math.min(1, (pl[0] - 78) / 10) : 0; for (let k = -30; k <= 30; k++) t.push(lab2rgb(Math.max(0, Math.min(100, pl[0] + k)), pl[1] + (k < 0 ? -k * .1 * cool : 0), pl[2] + (k < 0 ? k * .45 * cool : 0))); return t; });
+  const lut = Swap.map.map((m) => { const p = m.no ? penByNo(m.no) : null, pl = p ? effLab(m) : m.c.lab, t = [], cool = pl[0] > 78 && Math.hypot(pl[1], pl[2]) < 16 && pl[2] + pl[1] * .5 < 6 ? Math.min(1, (pl[0] - 78) / 10) : 0; for (let k = -30; k <= 30; k++) t.push(lab2rgb(Math.max(0, Math.min(100, pl[0] + k)), pl[1] + (k < 0 ? -k * .1 * cool : 0), pl[2] + (k < 0 ? k * .45 * cool : 0))); return t; });
   const meanL = Array.from(sumL, (v, k) => cnt[k] ? v / cnt[k] : 50);
-  const penC = Swap.map.map(m => { const pl = m.no ? hexLab(penByNo(m.no).hex) : m.c.lab; return Math.hypot(pl[1], pl[2]); });
+  const penC = Swap.map.map(m => { const pl = m.no ? effLab(m) : m.c.lab; return Math.hypot(pl[1], pl[2]); });
   // 这支笔偏暖还是偏冷（肤色、米白也算暖）
-  const penW = Swap.map.map(m => { const pl = m.no ? hexLab(penByNo(m.no).hex) : m.c.lab; return Math.max(0, Math.min(1, (pl[2] + pl[1] * .5) / 10)); });
+  const penW = Swap.map.map(m => { const pl = m.no ? effLab(m) : m.c.lab; return Math.max(0, Math.min(1, (pl[2] + pl[1] * .5) / 10)); });
   const D = new Uint8Array(N).fill(8);
   for (let i = 0; i < N; i++) { const x = i % W; if ((x > 0 && lab[i - 1] !== lab[i]) || (x < W - 1 && lab[i + 1] !== lab[i]) || (i >= W && lab[i - W] !== lab[i]) || (i + W < N && lab[i + W] !== lab[i])) D[i] = 0; }
   for (let i = 0; i < N; i++) { const x = i % W; let v = D[i]; if (x > 0) v = Math.min(v, D[i - 1] + 1); if (i >= W) v = Math.min(v, D[i - W] + 1); D[i] = v; }
@@ -1828,7 +1874,7 @@ function paintBuf() {
 function sketchData() {
   if (Swap.cache.sk) return Swap.cache.sk;
   const r = Swap.res, W = r.W, H = r.H, N = W * H, keys = [], kid = new Map();
-  const toKey = Swap.map.map(m => { const k = m.no || ('#' + m.c.hex); if (!kid.has(k)) { kid.set(k, keys.length); keys.push({k, no: m.no, hex: m.no ? penByNo(m.no).hex : m.c.hex}); } return kid.get(k); });
+  const toKey = Swap.map.map(m => { const k = m.no ? m.no + '~' + (m.dil || 1) : ('#' + m.c.hex); if (!kid.has(k)) { kid.set(k, keys.length); keys.push({k, no: m.no, dil: m.dil || 1, hex: effHex(m)}); } return kid.get(k); });
   const al = absLabels();
   let lab = new Uint8Array(N); for (let i = 0; i < N; i++) lab[i] = toKey[al[i]];
   lab = mergeSmall(majority(lab, W, H, keys.length), W, H, Math.round(N * .0006));
@@ -1839,9 +1885,10 @@ function sketchData() {
   const area = new Float64Array(keys.length); for (let i = 0; i < N; i++) area[lab[i]]++;
   const order = keys.map((_, i) => i).filter(i => area[i] > 0).sort((a, b) => area[b] - area[a]);
   const num = new Int16Array(keys.length).fill(0); order.forEach((k, j) => { num[k] = j + 1; });
-  const placed = [], cand = regionMarks(lab, W, H).filter(m => m.r >= 8).sort((a, b) => b.r - a.r);
+  const placed = [], cand = regionMarks(lab, W, H).filter(m => m.r >= 9 * Math.max(1, W / 980)).sort((a, b) => b.r - a.r);
   for (const m of cand) {
-    const fs = Math.max(11, Math.min(20, m.r * .85)), rad = fs * .8;
+    // 字号跟着画面大小走（手机上画布会缩小到三分之一左右，字不能太小）
+    const fs = Math.max(W / 48, Math.min(W / 32, m.r * .85)), rad = fs * .8;
     if (placed.some(q => Math.hypot(q.x - m.x, q.y - m.y) < q.rad + rad + 6)) continue;
     placed.push({x: m.x, y: m.y, v: m.v, fs, rad});
     if (placed.length >= 90) break;
@@ -1873,7 +1920,7 @@ function renderSkKey() {
   $('#skCtl').hidden = !on; box.hidden = !on || Swap.skFill === 'line'; $('#skLab').hidden = Swap.skFill === 'line';
   if (!on || Swap.skFill === 'line') return;
   const sk = sketchData(), N = Swap.res.W * Swap.res.H;
-  box.innerHTML = sk.order.map(k => { const key = sk.keys[k], p = key.no ? penByNo(key.no) : null; return '<span class="kk"><i class="kn">' + sk.num[k] + '</i>' + (p ? penHTML(p, 'mini') : '<i class="sw" style="--c:' + key.hex + '"></i>') + '<span><b>' + esc(p ? p.name || p.no : '没配笔') + '</b><small>' + esc(p ? p.no : '') + ' · ' + Math.max(1, Math.round(sk.area[k] / N * 100)) + '%</small></span></span>'; }).join('');
+  box.innerHTML = sk.order.map(k => { const key = sk.keys[k], p = key.no ? penByNo(key.no) : null, dl = key.dil < 1; return '<span class="kk' + (dl ? ' dil' : '') + '"><i class="kn">' + sk.num[k] + '</i>' + (p ? (dl ? '<span class="pen mini tint"><i class="sw" style="--c:' + key.hex + '"></i><b>' + esc(p.no) + '</b></span>' : penHTML(p, 'mini')) : '<i class="sw" style="--c:' + key.hex + '"></i>') + '<span><b>' + esc(p ? (p.name || p.no) + (dl ? ' + 水' : '') : '没配笔') + '</b><small>' + esc(p ? p.no + (dl ? ' · ' + dilText(key.dil) : '') : '') + ' · ' + Math.max(1, Math.round(sk.area[k] / N * 100)) + '%</small></span></span>'; }).join('');
 }
 function groups() {
   const g = new Map();
@@ -1882,7 +1929,7 @@ function groups() {
     let e = g.get(m.no); if (!e) { e = {no: m.no, share: 0, items: []}; g.set(m.no, e); }
     e.share += m.c.share; e.items.push(m);
   });
-  const arr = Array.from(g.values()).map(e => { e.items.sort((a, b) => b.c.share - a.c.share); e.main = e.items[0]; return e; });
+  const arr = Array.from(g.values()).map(e => { e.items.sort((a, b) => b.c.share - a.c.share); e.main = e.items.find(m => (m.dil || 1) === 1) || e.items[0]; e.dils = e.items.filter(m => (m.dil || 1) < 1); return e; });
   arr.sort((a, b) => b.share - a.share);
   Swap.extra.forEach(x => { if (!g.has(x.no)) arr.push({no: x.no, share: 0, extra: true, src: x.src, items: []}); });
   return arr;
@@ -1891,6 +1938,7 @@ function swapPens() { return groups().map(e => ({no: e.no, share: Math.round(e.s
 
 /* ================= 渲染画布 ================= */
 function penForLabel(i) { const m = Swap.map[i]; return m && m.no ? penByNo(m.no) : null; }
+function labelRGB(i) { const m = Swap.map[i]; return hex2rgb(effHex(m)); }
 function render(cv, view, step) {
   cv = cv || $('#swapCv'); view = view || Swap.view; step = step == null ? Swap.step : step;
   const main = cv.id === 'swapCv', r = Swap.res; if (!r) return;
@@ -1906,12 +1954,31 @@ function render(cv, view, step) {
   cv.width = W; cv.height = H;
   const x = cv.getContext('2d'), im = x.createImageData(W, H), d = im.data, lab = absLabels(), LN = r.lines;
   const pb = Swap.paintStyle !== 'flat' && view !== 'lines' ? paintBuf() : null;
-  const col = Swap.map.map((m, i) => { const p = penForLabel(i); return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
+  const col = Swap.map.map((m, i) => labelRGB(i));
   const INK = [36, 38, 50], PAPER = [251, 250, 246], lk = Swap.lineOn ? .9 / 255 : 0;
   const put = (i, c, a) => { d[i * 4] = c[0] + (INK[0] - c[0]) * a; d[i * 4 + 1] = c[1] + (INK[1] - c[1]) * a; d[i * 4 + 2] = c[2] + (INK[2] - c[2]) * a; d[i * 4 + 3] = 255; };
-  if (view === 'sketch' && Swap.skFill === 'line') {
-    const ed = outlineData().edge;
-    for (let i = 0; i < N; i++) put(i, PAPER, ed[i] * .85);
+  if (view === 'sketch') {
+    // 画稿像一张「淡彩速写」：水彩纸 + 铅笔线 + 薄薄一层水彩
+    //  铅笔：暖灰石墨色，外轮廓压得重、里面的分区线轻；线的轻重沿着线有起伏，纸纹凸起的地方石墨多一点
+    const sk = sketchData(), ol = outlineData().edge, se = sk.edge, f = Swap.skFill, PT = paperTex(W, H), ps = PT.s, sc = Math.max(1, W / 860);
+    const GR = [70, 64, 60], lineOnly = f === 'line';
+    const wash = !lineOnly && f > 0 ? (pb || null) : null, fillc = sk.keys.map(k => hex2rgb(k.hex));
+    const wk = lineOnly ? 0 : f >= 1 ? 1 : f * 1.35;
+    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+      const i = y * W + xx, pk = 1 + .05 * ps[i];
+      let R = PAPER[0] * pk, G = PAPER[1] * pk, B = PAPER[2] * pk;
+      if (wk > 0) {
+        const c = wash ? [wash[i * 4], wash[i * 4 + 1], wash[i * 4 + 2]] : fillc[sk.lab[i]];
+        R += (c[0] - R) * wk; G += (c[1] - G) * wk; B += (c[2] - B) * wk;
+      }
+      // 铅笔线的轻重：沿线慢慢起伏 + 纸纹颗粒
+      const pres = .78 + .22 * n2(xx / (23 * sc) + 4.1, y / (23 * sc) + 1.7), grain = .8 + .35 * Math.max(-.6, Math.min(.6, ps[i] * 3));
+      const main = ol[i] * (lineOnly ? .82 : .62), inner = lineOnly ? 0 : se[i] * (f >= 1 ? .3 : .42);
+      // 起稿线多画一道很淡的重复线，像手画时描了两遍
+      const twice = lineOnly && xx + 2 < W && y + 1 < H ? ol[i + W + 2] * .16 : 0;
+      const dk = wash && Swap.cache.deck ? Swap.cache.deck[i] : 0, a = Math.min(.92, Math.max(main, inner, twice) * pres * grain) * (1 - dk);
+      d[i * 4] = R + (GR[0] - R) * a; d[i * 4 + 1] = G + (GR[1] - G) * a; d[i * 4 + 2] = B + (GR[2] - B) * a; d[i * 4 + 3] = 255;
+    }
   } else if (view === 'lines') {
     for (let i = 0; i < N; i++) put(i, PAPER, LN[i] / 255);
   } else if (view === 'step') {
@@ -1921,14 +1988,6 @@ function render(cv, view, step) {
     for (let i = 0; i < N; i++) {
       if (inS(i)) { const xx = i % W; let e = false; for (const o of [-2, -1, 1, 2]) { const xo = xx + o; if (xo >= 0 && xo < W && !inS(i + o)) e = true; const yo = i + o * W; if (yo >= 0 && yo < N && !inS(yo)) e = true; } if (e) { d[i * 4] = HL[0]; d[i * 4 + 1] = HL[1]; d[i * 4 + 2] = HL[2]; d[i * 4 + 3] = 255; continue; } }
       const on = so && so[i] <= step; if (!on) { const k = 1 + .045 * pps[i]; put(i, [PAPER[0] * k, PAPER[1] * k, PAPER[2] * k], ed[i] * .55); continue; } put(i, on ? (pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : col[lab[i]]) : PAPER, on ? LN[i] * lk : ed[i] * .55); }
-  } else if (view === 'sketch') {
-    const sk = sketchData(), sl = sk.lab, f = Swap.skFill, EDGE = [84, 86, 100];
-    const fillc = sk.keys.map(k => { const c = hex2rgb(k.hex); return [PAPER[0] + (c[0] - PAPER[0]) * f, PAPER[1] + (c[1] - PAPER[1]) * f, PAPER[2] + (c[2] - PAPER[2]) * f]; });
-    const se = sk.edge;
-    for (let i = 0; i < N; i++) {
-      const c = f >= 1 && pb ? [pb[i * 4], pb[i * 4 + 1], pb[i * 4 + 2]] : fillc[sl[i]], e = se[i] * .9;
-      d[i * 4] = c[0] + (EDGE[0] - c[0]) * e; d[i * 4 + 1] = c[1] + (EDGE[1] - c[1]) * e; d[i * 4 + 2] = c[2] + (EDGE[2] - c[2]) * e; d[i * 4 + 3] = 255;
-    }
   } else if (pb) {
     // 照片这种纹理多的图：勾线用「起稿线」那种干净的大轮廓（顺、连贯），而不是纹理里抠出来的碎线
     const dk = Swap.cache.deck, olE = lk && (r.kr || 0) >= 3 ? outlineData().edge : null;
@@ -1940,13 +1999,17 @@ function render(cv, view, step) {
   if (view === 'sketch' && Swap.skFill !== 'line') {
     const sk = sketchData();
     x.textAlign = 'center'; x.textBaseline = 'middle';
+    // 编号像用铅笔在角落轻轻写上的小字：没有白泡泡，旁边点一个这支笔的小色点
+    const full = Swap.skFill >= 1;
+    const dk = Swap.skFill > 0 && Swap.cache.deck;
     sk.placed.forEach(m => {
-      const key = sk.keys[m.v], t = Swap.skLab === 'no' && key.no ? key.no : String(sk.num[m.v]);
-      x.font = '700 ' + Math.round(m.fs * (t.length > 2 ? .78 : 1)) + 'px "Courier Prime", ui-monospace, monospace';
-      const w = Math.max(m.rad * 2, x.measureText(t).width + m.fs * .6), h = m.rad * 2;
-      x.fillStyle = 'rgba(255,255,255,.92)'; x.strokeStyle = '#5A5C6A'; x.lineWidth = 1.3;
-      x.beginPath(); if (x.roundRect) x.roundRect(m.x - w / 2, m.y - h / 2, w, h, h / 2); else x.rect(m.x - w / 2, m.y - h / 2, w, h); x.fill(); x.stroke();
-      x.fillStyle = '#22242E'; x.fillText(t, m.x, m.y + 1);
+      if (dk && dk[Math.round(m.y) * W + Math.round(m.x)] > .3) return;
+      const key = sk.keys[m.v], t = Swap.skLab === 'no' && key.no ? key.no + (key.dil < 1 ? '水' : '') : String(sk.num[m.v]), fs = Math.round(m.fs * (t.length > 3 ? .62 : t.length > 2 ? .72 : .82));
+      x.font = '700 ' + fs + 'px "Courier Prime", ui-monospace, monospace';
+      const tw = x.measureText(t).width, dot = Math.max(3, fs * .26), cx = m.x - dot - 1;
+      x.lineJoin = 'round'; x.lineWidth = Math.max(2.5, fs * .28); x.strokeStyle = full ? 'rgba(255,255,255,.82)' : 'rgba(251,250,246,.9)';
+      x.strokeText(t, cx, m.y + 1); x.fillStyle = 'rgba(58,52,48,.92)'; x.fillText(t, cx, m.y + 1);
+      x.beginPath(); x.arc(cx + tw / 2 + dot + 2, m.y + 1, dot, 0, 7); x.fillStyle = key.hex; x.fill(); x.lineWidth = 1; x.strokeStyle = 'rgba(58,52,48,.45)'; x.stroke();
     });
   }
   if (view === 'compare') {
@@ -2016,7 +2079,7 @@ $('#itemBar').addEventListener('click', e => {
 let openAlt = null;
 function renderFidelity() {
   let sw = 0, sd = 0, worst = null;
-  Swap.map.forEach(m => { const p = m.no ? penByNo(m.no) : null; if (!p || m.c.share < .002) return; const d = dE(m.c.lab, hexLab(p.hex)); sw += m.c.share; sd += m.c.share * d; if (d >= 9 && m.c.share > .02 && (!worst || m.c.share > worst.m.c.share)) worst = {m, p, d}; });
+  Swap.map.forEach(m => { const p = m.no ? penByNo(m.no) : null; if (!p || m.c.share < .002) return; const d = dE(m.c.lab, effLab(m)); sw += m.c.share; sd += m.c.share * d; if (d >= 9 && m.c.share > .02 && (!worst || m.c.share > worst.m.c.share)) worst = {m, p, d}; });
   const el = $('#fidelity'); if (!sw) { el.hidden = true; $('#fidHint').hidden = true; return; }
   const score = Math.max(0, Math.min(100, Math.round(100 - (sd / sw) * 3.2)));
   el.hidden = false; $('#fidN').textContent = score;
@@ -2040,10 +2103,11 @@ function renderSwapList() {
     }
     const m = g.main, d = p ? dE(m.c.lab, hexLab(p.hex)) : 99, q = quality(d);
     let mix = '';
+    const dl = (g.dils || []).length ? '<span class="dilnote">' + g.dils.map(x => '<i class="sw" style="--c:' + effHex(x) + '" title="' + esc(dilText(x.dil)) + '"></i>').join('') + '也兑水涂浅的地方 · 占 ' + Math.max(1, Math.round(g.dils.reduce((a, x) => a + x.c.share, 0) * 100)) + '%</span>' : '';
     if (d >= 8 && p) { const key = 'mix' + m.c.hex; if (!(key in Swap.cache)) Swap.cache[key] = bestMix(m.c.lab, Swap.onlyHave, d); const bm = Swap.cache[key]; if (bm) mix = '<span>可以试 ' + esc(bm.a.no) + ' + ' + esc(bm.b.no) + ' 叠色</span>'; }
     const alt = openAlt === g.no ? '<div class="alts">' + m.rank.map(r => '<button type="button" class="pen mini" data-alt="' + esc(r.p.no) + '" aria-pressed="' + (r.p.no === g.no) + '" title="' + esc(r.p.name) + '"><i class="sw" style="--c:' + r.p.hex + '"></i><b>' + esc(r.p.no) + '</b><span class="dl">' + r.d.toFixed(1) + '</span></button>').join('') + '<button class="btn small quiet" type="button" data-drop="' + esc(g.no) + '">这个颜色不要</button></div>' : '';
     return '<li class="prow" data-no="' + esc(g.no) + '"><i class="sw src" style="--c:' + m.c.hex + '" title="原图里的颜色 ' + m.c.hex + '"></i><span class="ar">→</span>' + penHTML(p) +
-      '<div class="pinfo"><b>' + esc(p ? p.name || p.no : g.no) + '</b><div><span class="st ' + q[0] + '">' + q[1] + '</span><span>占 ' + Math.max(1, Math.round(g.share * 100)) + '%</span>' + (p && p.st === 'low' ? '<span class="st warn">快没水</span>' : '') + mix + '</div></div>' +
+      '<div class="pinfo"><b>' + esc(p ? p.name || p.no : g.no) + '</b><div><span class="st ' + q[0] + '">' + q[1] + '</span><span>占 ' + Math.max(1, Math.round(g.share * 100)) + '%</span>' + dl + (p && p.st === 'low' ? '<span class="st warn">快没水</span>' : '') + mix + '</div></div>' +
       '<button class="more" type="button" data-more="' + esc(g.no) + '" aria-expanded="' + (openAlt === g.no) + '">换</button>' + alt + '</li>';
   }).join('') + (folded ? '<li class="pmore"><button class="btn small quiet" type="button" id="plistAll">还有 ' + rest.length + ' 支小面积的笔（共占 ' + Math.max(1, Math.round(rest.reduce((a, g) => a + (g.share || 0), 0) * 100)) + '%）· 展开</button><span class="penstrip">' + rest.map(g => penHTML(penByNo(g.no), 'mini')).join('') + '</span></li>' : (gs.length > SHOW + 2 ? '<li class="pmore"><button class="btn small quiet" type="button" id="plistAll">收起</button></li>' : ''));
 }
@@ -2126,7 +2190,9 @@ function autoSteps() {
     { const pl = hexLab(p.hex); if (m.ph === 0 && pl[0] >= 91 && Math.hypot(pl[1], pl[2]) < 6) return {t: '留白 · ' + (p.name || no), tool: '不用涂', d: '框里的' + wh.slice(0, 3).join('、') + '是画面最白的地方：纸本来就是白的，先别涂，后面涂四周的时候绕开它。', tip: '画完觉得不够白、或者纸不是纯白，最后再用' + (p.name || no) + '补一下。', nos: [no], wait: false}; }
     const cat = m.ph === 0 ? m.k : m.ph === 1 ? 2 : 4, label = CATS[cat].s;
     const tool = m.ph === 0 ? '粗头' : m.ph === 1 ? (m.area > N * .03 ? '中头' : '细头') : '细头';
-    return {t: label + ' · ' + (p.name || no), tool, d: '用' + tool + '把框里的' + wh.slice(0, 3).join('、') + '涂满。', tip: CATS[cat].tip, nos: [no], wait: m.ph === 0};
+    const dils = Array.from(new Set(cs.map(c => Swap.map[c.v].dil || 1).filter(a => a < 1))).sort((a, b) => a - b), full = cs.some(c => (Swap.map[c.v].dil || 1) === 1);
+    const how = dils.length ? (full ? '先把' + (p.name || no) + '挤一点在调色盘上，' + dils.map(dilText).join('、') + '调浅，涂框里浅的地方；干了以后再用原色涂深的地方。' : '把' + (p.name || no) + '挤一点在调色盘上，' + dils.map(dilText).join('、') + '调浅，用' + tool + '或水笔刷把框里的' + wh.slice(0, 3).join('、') + '涂满。') : '用' + tool + '把框里的' + wh.slice(0, 3).join('、') + '涂满。';
+    return {t: label + ' · ' + (p.name || no) + (dils.length && !full ? '（兑水）' : ''), tool, d: how, tip: dils.length ? '兑水的颜色先在纸边试一下，太深就再加水；趁湿的时候边缘会自然晕开。' : CATS[cat].tip, nos: [no], wait: m.ph === 0};
   });
   addGlaze(steps, stepOf, steps.findIndex(st => st.t === '点高光'));
   return {steps, stepOf};
@@ -2177,7 +2243,7 @@ function renderSteps() {
   const olist = $('#procSteps');
   olist.innerHTML = steps.map((st, k) => '<li><button type="button" class="pstep" data-step="' + k + '" aria-pressed="' + (Swap.view === 'step' && Swap.step === k) + '"><canvas width="10" height="10"></canvas><span class="n">第 ' + (k + 1) + ' 步</span><b>' + esc(st.t) + '</b>' + (st.tool || st.wait ? '<span class="sbadges">' + (st.tool ? '<i>' + esc(st.tool) + '</i>' : '') + (st.wait ? '<i class="w">画完等干</i>' : '') + '</span>' : '') + '<span class="penstrip">' + st.nos.map(n => penHTML(penByNo(n), 'mini')).join('') + '</span><p class="do">' + esc(st.d) + '</p>' + (st.tip ? '<p class="tipl">小提示：' + esc(st.tip) + '</p>' : '') + '</button></li>').join('');
   const W = r.W, H = r.H, sc = Math.max(1, Math.floor(W / 240)), lab = absLabels(), LN = r.lines, pb = Swap.paintStyle !== 'flat' ? paintBuf() : null;
-  const col = Swap.map.map(m => { const p = m.no ? penByNo(m.no) : null; return p ? hex2rgb(p.hex) : hex2rgb(m.c.hex); });
+  const col = Swap.map.map((m, i) => labelRGB(i));
   const lk = Swap.lineOn ? .9 / 255 : 0, ol = outlineData().lab;
   steps.forEach((st, k) => {
     const cv = olist.querySelectorAll('canvas')[k]; cv.width = Math.ceil(W / sc); cv.height = Math.ceil(H / sc);
@@ -2205,6 +2271,7 @@ $('#procSteps').addEventListener('click', e => {
   $('#cvWrap').scrollIntoView({block: 'nearest', behavior: 'smooth'});
 });
 function flap(n) { return String(n).split('').map(c => '<b>' + c + '</b>').join(''); }
+$('#diluteOn').addEventListener('change', e => { Swap.dilute = e.target.checked; Swap.rematch(); });
 $('#plist').addEventListener('click', e => { if (e.target.closest('#plistAll')) { Swap.plistOpen = !Swap.plistOpen; renderSwapList(); } });
 $('#plist').addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
@@ -2371,10 +2438,10 @@ async function runAi(auto) {
   btn.disabled = true; tips.hidden = false; tips.innerHTML = '<p class="thinking">Claude 正在拆解这张画：构图、光源、配色，再排先画哪、后画哪（大概半分钟到一分钟）…</p><button class="btn small quiet" type="button" id="planStop">停</button>';
   $('#planStop').onclick = () => planAbort && planAbort.abort();
   const avail = Store.pens.filter(p => p.st !== 'out').map(p => p.no + ' ' + (p.name || '') + ' ' + p.hex).join('\n');
-  const used = swapPens().map(p => { const pen = penByNo(p.no); return p.no + ' ' + (pen ? pen.name : '') + ' 占' + Math.round(p.share * 100) + '% 原图颜色' + p.src; }).join('\n');
+  const used = groups().map(g => { const pen = penByNo(g.no), dl = (g.dils || []).reduce((a, x) => a + x.c.share, 0); return g.no + ' ' + (pen ? pen.name : '') + ' 占' + Math.round(g.share * 100) + '% 原图颜色' + (g.main ? g.main.c.hex : g.src) + (dl ? '（其中' + Math.max(1, Math.round(dl * 100)) + '%是兑水调浅后涂的）' : ''); }).join('\n');
   const what = Swap.kind === 'photo' ? '一张我自己拍的照片，我想把它画成一幅丙烯马克笔画' : '别人画的一幅丙烯马克笔画，我想用我自己的笔临摹';
   const prompt = '你是丙烯马克笔绘画老师，回答用简体中文。图片是' + what + '。\n\n我手上有的笔（色号 名字 色值）：\n' + avail + '\n\n程序已经把画面颜色对应到我的笔（色号 名字 占比 原图颜色）：\n' + used +
-    '\n\n我喜欢抽象、鲜艳、有水彩感的画风：不用一比一照抄，可以概括形状、提炼和加强颜色，但要保留这张画最打动人的地方。请多讲怎么用丙烯马克笔做出水彩感（浅色先铺、趁上一层没干透叠下一层做过渡、笔尖轻扫做晕染边、留白透气、笔触顺着形体方向）。' +
+    '\n\n我喜欢抽象、鲜艳、有水彩感的画风：不用一比一照抄，可以概括形状、提炼和加强颜色，但要保留这张画最打动人的地方。颜色要少而精：浅色优先用已经要用的笔挤在调色盘上兑水调浅（丙烯马克笔是水性的），不要为了一点点浅色多用一支笔。请多讲怎么用丙烯马克笔做出水彩感（浅色先铺、趁上一层没干透叠下一层做过渡、笔尖轻扫做晕染边、留白透气、笔触顺着形体方向）。' +
     '\n\n光影不要只照抄原图，要有你自己的设计：像画家那样定一个清楚的光源（程序这次定的是光从' + (() => { try { const L = lightField(); return lightWord(L.lx, L.ly); } catch (e) { return '左上'; } })() + '来，你觉得别的方向更好看可以改），给主体安排受光面、明暗交界、背光面、反光和落在底色上的投影；阴影用冷色（蓝紫）薄罩，受光面偏暖；大面积背景不要东一块西一块，做成有方向、分几层的渐变（靠光的那头浅，干了再叠一层）。步骤里要有一步专门「定光·罩阴影」。' +
     '\n\n请你像一位有十年经验、专门教丙烯马克笔的插画老师那样，把这张画专业地拆解给我，然后写一份像小红书「附过程」那样细的临摹步骤。\n' +
     '拆解要说到点子上：构图（视觉中心在哪、画面怎么分层：远/中/近）、光源（从哪边来、亮面暗面投影在哪）、配色（主色、辅助色、点缀色，冷暖关系）、难点（最容易画坏的地方和怎么处理）。\n' +
